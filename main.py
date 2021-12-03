@@ -109,13 +109,16 @@ async def evaluate(ctx, *, content):
     await ctx.reply(embed = discord.Embed(
         title = "Evaluation",
         description = str(eval(content, {
-            "__builtins__": (__builtins__ if await client.is_owner(ctx.author) else None),
+            "__import__": None,
+            "eval": (eval if await client.is_owner(ctx.author) else None),
             "ctx": ctx,
             "client": client,
             "timestamp": timestamp(),
             "db": db,
             "random": random.random(),
             "choice": random.choice,
+            "format": __import__("json").dumps,
+            "shuffle": lambda x: random.sample(x, len(x))
         })),
         color = 0xffe5ce
     ).set_footer(
@@ -305,9 +308,7 @@ async def bot(ctx):
         title = "Bot Info",
         description = f"""
 In: {len(client.guilds)} guilds
-Latency:
- - Client: {int(client.latency * 1000)}ms
- - API: {int((timestamp() - ctx.message.created_at.timestamp()) * 1000)}ms
+Latency: {int(client.latency * 1000)}ms
 Uptime: <t:{int(client.launch_time.timestamp())}:R>
 Version: {discord.__version__}
         """,
@@ -425,7 +426,7 @@ async def balance(ctx, *, member: discord.Member = None):
         raise commands.BadArgument("member must not be a bot")
     if str(member.id) not in db["Balance"]:
         db["Balance"][str(member.id)] = 0
-    await ctx.reply(f"`{member.display_name} ({member})` have ${db['Balance'][str(member.id)]}.")
+    await ctx.reply(f"`{member}` have ${db['Balance'][str(member.id)]}.")
 
 @client.command(aliases = ("lb",))
 @commands.guild_only()
@@ -472,7 +473,7 @@ async def gamble(ctx, amount: int):
 @commands.guild_only()
 async def shop(ctx):
     if str(ctx.guild.id) not in db["Shop"]:
-        db["Shop"][str(ctx.guild.id)] = {} #{"name": price}
+        db["Shop"][str(ctx.guild.id)] = {"nothing": 0} #{"name": price}
     if ctx.invoked_subcommand == None:
         await ctx.reply(embed = discord.Embed(
             title = "Shop",
@@ -488,7 +489,7 @@ async def shop(ctx):
 async def add(ctx, name, price: int):
     if name in db["Shop"][str(ctx.guild.id)]:
         await ctx.reply(f'Item "{name}" is already added.')
-    elif price > -1:
+    elif price >= 0:
         db["Shop"][str(ctx.guild.id)][name] = price
         await ctx.reply(f'Item "{name}" added.')
     else:
@@ -522,7 +523,7 @@ async def buy(ctx, *, name):
     if str(ctx.author.id) not in db["Balance"]:
         db["Balance"][str(ctx.author.id)] = 0
     if str(ctx.guild.id) not in db["Shop"]:
-        db["Shop"][str(ctx.guild.id)] = {} #{"name": price}
+        db["Shop"][str(ctx.guild.id)] = {"nothing": 0} #{"name": price}
     if name not in db["Shop"][str(ctx.guild.id)]:
         await ctx.reply(f'Item "{name}" not found.')
     elif db["Balance"][str(ctx.author.id)] >= db["Shop"][str(ctx.guild.id)][name]:
@@ -544,7 +545,7 @@ async def doc(ctx, *, search = ""):
 @commands.is_owner()
 async def set(ctx, member: discord.Member, amount: int):
     db["Balance"][str(member.id)] = amount
-    await ctx.reply(f"`{member.display_name} ({member})`'s balance has been set to ${amount}.")
+    await ctx.reply(f"`{member}`'s balance has been set to ${amount}.")
 
 @client.command(hidden = True)
 @commands.is_owner()
