@@ -10,9 +10,7 @@ def home():
 <!doctype html>
 <html>
     <head>
-        <title>
-            Senjibot
-        </title>
+        <title>Senjibot</title>
         <meta content="Senjibot" property="og:title" />
         <meta content="Senjibot is a multipurpose bot that has economy system and editable guild-only shop" property="og:description" />
         <meta content="https://Senjibot.senjienji.repl.co" property="og:url" />
@@ -20,23 +18,28 @@ def home():
         <meta content="#FFE5CE" data-react-helmet="true" name="theme-color" />
     </head>
     <body>
-        <h1>
-            Senjibot
-        </h1>
-        <p>
-            Senjibot is a multipurpose bot that has economy system and editable guild-only shop
-        </p>
+        <h1>Senjibot</h1>
+        <p>Senjibot is a multipurpose bot that has economy system and editable guild-only shop</p>
         <hr />
-        <a href="https://Senjibot.senjienji.repl.co/invite">
-            Invite me!
-        </a>
+        <a href="https://Senjibot.senjienji.repl.co/invite">Invite me!</a>
     </body>
 </html>
     """
 
 @app.route("/invite")
 def invite():
-    return redirect(discord.utils.oauth_url(893338697947316225, permissions = discord.Permissions(permissions = 268561478)))
+    return redirect(discord.utils.oauth_url(893338697947316225, permissions = discord.Permissions(
+        manage_roles = True,
+        kick_members = True,
+        ban_members = True,
+        read_messages = True,
+        send_messages = True,
+        manage_messages = True,
+        embed_links = True,
+        attach_files = True,
+        read_message_history = True,
+        add_reactions = True
+    )))
 
 def keep_alive():
     t = Thread(target = lambda: app.run(host = "0.0.0.0", port = 8080))

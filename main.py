@@ -15,17 +15,30 @@ if "Shop" not in db:
 if "Enabled" not in db:
     db["Enabled"] = {} #{"guild_id": {"command_name": enabled}}
 
-class MinimalHelpCommand(commands.MinimalHelpCommand):
-    async def send_pages(self):
-        for page in self.paginator.pages:
-            await self.context.message.reply(embed = discord.Embed(
-                title = "Help",
-                description = page,
-                color = 0xffe5ce
-            ).set_footer(
-                text = self.context.author.display_name,
-                icon_url = self.context.author.avatar_url
-            ))
+class HelpCommand(commands.HelpCommand):
+    async def send_bot_help(self, mapping):
+        await self.context.message.reply(embed = discord.Embed(
+            title = "Help",
+            description = f"""
+Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{self.context.command.name} <command>` for more info on a command.
+
+**__Commands__**
+{' '.join(command.name for command in await self.filter_commands(mapping[None], sort = True))}
+            """,
+            color = 0xffe5ce
+        ).set_footer(
+            text = self.context.author.display_name,
+            icon_url = self.context.author.avatar_url
+        ))
+    async def send_command_help(self, command):
+        await self.context.message.reply(embed = discord.Embed(
+            title = "Help",
+            description = f"{self.context.bot.command_prefix(self.context.bot, self.context.message)}{command.name} {command.signature}" + (f"\n**Aliases:** {', '.join(command.aliases)}" if command.aliases != [] else str()),
+            color = 0xffe5ce
+        ).set_footer(
+            text = self.context.author.display_name,
+            icon_url = self.context.author.avatar_url
+        ))
 
 def get_prefix(client, message):
     if message.guild == None:
@@ -37,7 +50,7 @@ def get_prefix(client, message):
 client = commands.Bot(
     command_prefix = get_prefix,
     activity = discord.Game("Python"),
-    help_command = MinimalHelpCommand(no_category = "Commands"),
+    help_command = HelpCommand(verify_checks = False),
     owner_id = 902371374033670224,
     allowed_mentions = discord.AllowedMentions(
         everyone = False,
@@ -126,7 +139,7 @@ async def evaluate(ctx, *, content):
         icon_url = ctx.author.avatar_url
     ))
 
-@client.command(aliases = ("cds",))
+@client.command(aliases = ["cds", "cd"])
 async def cooldowns(ctx):
     await ctx.reply(embed = discord.Embed(
         title = "Cooldowns",
@@ -282,7 +295,7 @@ Icon URL: [Link]({guild.icon_url})
         icon_url = ctx.author.avatar_url
     ))
 
-@client.command(aliases = ("emote",))
+@client.command(aliases = ["emote"])
 @commands.bot_has_permissions(attach_files = True)
 async def emoji(ctx, *, emoji: discord.Emoji):
     await ctx.reply(embed = discord.Embed(
@@ -418,7 +431,7 @@ async def purge(ctx, limit: str):
     await ctx.send(f"Purged {len(purge) - 1} messages.", delete_after = 5)
 
 #Currency Commands
-@client.command(aliases = ("bal",))
+@client.command(aliases = ["bal"])
 async def balance(ctx, *, member: discord.Member = None):
     if member == None:
         member = ctx.author
@@ -428,7 +441,7 @@ async def balance(ctx, *, member: discord.Member = None):
         db["Balance"][str(member.id)] = 0
     await ctx.reply(f"`{member}` have ${db['Balance'][str(member.id)]}.")
 
-@client.command(aliases = ("lb",))
+@client.command(aliases = ["lb"])
 @commands.guild_only()
 async def leaderboard(ctx):
     await ctx.reply(embed = discord.Embed(
