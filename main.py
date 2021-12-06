@@ -6,6 +6,8 @@ from replit import db
 from time import time as timestamp
 import random
 
+newline = "\n"
+
 if "Prefix" not in db:
     db["Prefix"] = {} #{"guild_id": "prefix"}
 if "Balance" not in db:
@@ -14,7 +16,10 @@ if "Shop" not in db:
     db["Shop"] = {} #{"guild_id": {"name": price}}
 if "Enabled" not in db:
     db["Enabled"] = {} #{"guild_id": {"command_name": enabled}}
-
+"""
+if "ReactRole" not in db:
+    db["ReactRole"] = {} #{"message.id": {"emoji": role.id}}
+"""
 class HelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
         await self.context.message.reply(embed = discord.Embed(
@@ -24,6 +29,22 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
 
 **__Commands__**
 {' '.join(command.name for command in await self.filter_commands(mapping[None], sort = True))}
+            """,
+            color = 0xffe5ce
+        ).set_footer(
+            text = self.context.author.display_name,
+            icon_url = self.context.author.avatar_url
+        ))
+    async def send_group_help(self, group):
+        await self.context.message.reply(embed = discord.Embed(
+            title = "Help",
+            description = f"""
+{self.context.bot.command_prefix(self.context.bot, self.context.message)}{group.name}
+
+Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{self.context.command.name} {group.name} [command]` for more info on a command.
+
+**Commands**
+{newline.join(f"{self.context.bot.command_prefix(self.context.bot, self.context.message)}{group.name} {command.name}" for command in group.commands)}
             """,
             color = 0xffe5ce
         ).set_footer(
@@ -76,8 +97,9 @@ async def is_enabled(ctx):
         db["Enabled"][str(ctx.guild.id)][ctx.command.name] = True
     return db["Enabled"][str(ctx.guild.id)][ctx.command.name]
 
-async def usage(ctx): await client.get_user(client.owner_id).send(f"`{ctx.author}` used `{ctx.command.name}`{str() if ctx.guild == None else f' in `{ctx.guild.name}`'}\n```\n{ctx.message.content}```")
-client.after_invoke(usage)
+@client.before_invoke
+async def trigger_typing(ctx):
+    await ctx.trigger_typing()
 
 #Events
 @client.event
@@ -89,6 +111,16 @@ async def on_ready():
     print("Ready")
     client.launch_time = __import__("datetime").datetime.utcnow()
     await client.get_user(client.owner_id).send(f"Online since <t:{int(client.launch_time.timestamp())}:d> <t:{int(client.launch_time.timestamp())}:T>")
+
+@client.event
+async def on_message(message):
+    if message.content.lower().startswith("im "):
+        await message.reply(f"Hi {message.content[3:]}, I'm dad!", mention_author = True)
+    elif message.content.lower().startswith("i'm "):
+        await message.reply(f"Hi {message.content[4:]}, I'm dad!", mention_author = True)
+    elif message.content.lower().startswith("i am "):
+        await message.reply(f"Hi {message.content[5:]}, I'm dad!", mention_author = True)
+    await client.process_commands(message)
 
 @client.event
 async def on_command_error(ctx, error):
@@ -115,7 +147,21 @@ async def on_guild_join(guild):
 @client.event
 async def on_guild_remove(guild):
     await client.get_user(client.owner_id).send(f"Removed from `{guild.name}`.")
+"""
+@client.event
+async def on_reaction_add(reaction, user):
+    print(str(reaction.message.id) in db["ReactRole"])
+    if str(reaction.message.id) in db["ReactRole"]:
+        if reaction.emoji in db["ReactRole"][str(reaction.message.id)]:
+            await user.add_roles(reaction.message.guild.get_role(db["ReactRole"][str(reaction.message.id)][reaction.emoji]))
 
+@client.event
+async def on_reaction_remove(reaction, user):
+    print(str(reaction.message.id) in db["ReactRole"])
+    if str(reaction.message.id) in db["ReactRole"]:
+        if reaction.emoji in db["ReactRole"][str(reaction.message.id)]:
+            await user.remove_roles(reaction.message.guild.get_role(db["ReactRole"][str(reaction.message.id)][reaction.emoji]))
+"""       
 #Miscellaneous Commands
 @client.command(name = "eval")
 async def evaluate(ctx, *, content):
@@ -123,14 +169,22 @@ async def evaluate(ctx, *, content):
         title = "Evaluation",
         description = str(eval(content, {
             "__import__": None,
-            "eval": (eval if await client.is_owner(ctx.author) else None),
+            "eval": None,
+            "exec": None,
+            "help": None,
+            "Ellipsis": None,
+            "copyright": None,
+            "credits": None,
+            "license": None,
+            "exit": None,
+            "quit": None
+        }, {
+            "db": dict(db),
             "ctx": ctx,
             "client": client,
             "timestamp": timestamp(),
-            "db": db,
-            "random": random.random(),
             "choice": random.choice,
-            "format": __import__("json").dumps,
+            "random": random.random(),
             "shuffle": lambda x: random.sample(x, len(x))
         })),
         color = 0xffe5ce
@@ -139,8 +193,8 @@ async def evaluate(ctx, *, content):
         icon_url = ctx.author.avatar_url
     ))
 
-@client.command(aliases = ["cds", "cd"])
-async def cooldowns(ctx):
+@client.command(aliases = ["cd"])
+async def cooldown(ctx):
     await ctx.reply(embed = discord.Embed(
         title = "Cooldowns",
         description = "\n".join(f"{index}. `{command.name}`: <t:{int(timestamp() + command.get_cooldown_retry_after(ctx))}:F>" for index, command in enumerate(filter(lambda command: command.is_on_cooldown(ctx), client.commands), start = 1)) or "Nothing found.",
@@ -362,7 +416,7 @@ async def prefix(ctx, prefix = None):
         await ctx.reply(f"My current prefix is `{client.command_prefix(client, ctx.message)}`.")
     elif prefix == None:
         await ctx.reply(f"My current prefix is `{db['Prefix'][str(ctx.guild.id)]}`.")
-    elif ctx.author.guild_permissions >= discord.Permissions(manage_guild = True):
+    elif ctx.author.guild_permissions.manage_guild:
         db["Prefix"][str(ctx.guild.id)] = prefix
         await ctx.reply(f"Prefix has been set to `{db['Prefix'][str(ctx.guild.id)]}`.")
     else:
@@ -544,7 +598,54 @@ async def buy(ctx, *, name):
         await ctx.reply(f'Item "{name}" purchased.')
     else:
         await ctx.reply(f"You are ${db['Shop'][str(ctx.guild.id)][name] - db['Balance'][str(ctx.author.id)]} short.")
+"""
+#Reactions Roles (BETA)
+@client.group(aliases = ["rr"])
+async def reactrole(ctx):
+    if ctx.invoked_subcommand == None:
+        await ctx.reply(embed = discord.Embed(
+            title = "Reaction Roles",
+            description = None,
+            color = 0xffe5ce
+        ).set_footer(
+            text = ctx.author.display_name,
+            icon_url = ctx.author.avatar_url
+        ))
 
+@reactrole.command()
+@commands.has_guild_permissions(manage_roles = True)
+@commands.bot_has_guild_permissions(manage_roles = True)
+async def add(ctx, message: discord.Message, emoji, role: discord.Role):
+    if str(message.id) not in db["ReactRole"]:
+        db["ReactRole"][str(message.id)] = {}
+    if emoji not in db["ReactRole"][str(message.id)]:
+        await message.add_reaction(emoji)
+        db["ReactRole"][str(message.id)][emoji] = role.id
+        await ctx.reply(f"{emoji} added.")
+    else:
+        await ctx.reply(f"{emoji} is already added.")
+
+@reactrole.command()
+@commands.has_guild_permissions(manage_roles = True)
+async def remove(ctx, message: discord.Message, emoji):
+    if str(message.id) not in db["ReactRole"]:
+        await ctx.reply(f"{message.id} not found.")
+    elif emoji not in db["ReactRole"][str(message.id)]:
+        await ctx.reply(f"{emoji} not found in {message.id}.")
+    else:
+        await message.remove_reaction(emoji, client.user)
+        del db["ReactRole"][str(message.id)][emoji]
+        await ctx.reply(f"{emoji} removed.")
+
+@reactrole.command()
+@commands.has_guild_permissions(manage_roles = True)
+async def clean(ctx, message: discord.Message):
+    if str(message.id) in db["ReactRole"]:
+        db["ReactRole"][str(message.id)] = {}
+        await ctx.reply(f"{message.id} cleaned.")
+    else:
+        await ctx.reply(f"{message.id} not found.")
+"""
 #Private Commands
 @client.command(hidden = True)
 @commands.is_owner()
