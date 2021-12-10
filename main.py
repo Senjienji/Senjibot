@@ -16,10 +16,7 @@ if "Shop" not in db:
     db["Shop"] = {} #{"guild_id": {"name": price}}
 if "Enabled" not in db:
     db["Enabled"] = {} #{"guild_id": {"command_name": enabled}}
-"""
-if "ReactRole" not in db:
-    db["ReactRole"] = {} #{"message.id": {"emoji": role.id}}
-"""
+
 class HelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
         await self.context.message.reply(embed = discord.Embed(
@@ -33,7 +30,7 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
             color = 0xffe5ce
         ).set_footer(
             text = self.context.author.display_name,
-            icon_url = self.context.author.avatar_url
+            icon_url = self.context.author.avatar
         ))
     async def send_group_help(self, group):
         await self.context.message.reply(embed = discord.Embed(
@@ -49,7 +46,7 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
             color = 0xffe5ce
         ).set_footer(
             text = self.context.author.display_name,
-            icon_url = self.context.author.avatar_url
+            icon_url = self.context.author.avatar
         ))
     async def send_command_help(self, command):
         await self.context.message.reply(embed = discord.Embed(
@@ -58,7 +55,7 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
             color = 0xffe5ce
         ).set_footer(
             text = self.context.author.display_name,
-            icon_url = self.context.author.avatar_url
+            icon_url = self.context.author.avatar
         ))
 
 def get_prefix(client, message):
@@ -113,16 +110,6 @@ async def on_ready():
     await client.get_user(client.owner_id).send(f"Online since <t:{int(client.launch_time.timestamp())}:d> <t:{int(client.launch_time.timestamp())}:T>")
 
 @client.event
-async def on_message(message):
-    if message.content.lower().startswith("im "):
-        await message.reply(f"Hi {message.content[3:]}, I'm dad!", mention_author = True)
-    elif message.content.lower().startswith("i'm "):
-        await message.reply(f"Hi {message.content[4:]}, I'm dad!", mention_author = True)
-    elif message.content.lower().startswith("i am "):
-        await message.reply(f"Hi {message.content[5:]}, I'm dad!", mention_author = True)
-    await client.process_commands(message)
-
-@client.event
 async def on_command_error(ctx, error):
     print(f"{str(type(error))[8:-2]}: {error}")
     content = str(error)
@@ -147,50 +134,36 @@ async def on_guild_join(guild):
 @client.event
 async def on_guild_remove(guild):
     await client.get_user(client.owner_id).send(f"Removed from `{guild.name}`.")
-"""
-@client.event
-async def on_reaction_add(reaction, user):
-    print(str(reaction.message.id) in db["ReactRole"])
-    if str(reaction.message.id) in db["ReactRole"]:
-        if reaction.emoji in db["ReactRole"][str(reaction.message.id)]:
-            await user.add_roles(reaction.message.guild.get_role(db["ReactRole"][str(reaction.message.id)][reaction.emoji]))
 
-@client.event
-async def on_reaction_remove(reaction, user):
-    print(str(reaction.message.id) in db["ReactRole"])
-    if str(reaction.message.id) in db["ReactRole"]:
-        if reaction.emoji in db["ReactRole"][str(reaction.message.id)]:
-            await user.remove_roles(reaction.message.guild.get_role(db["ReactRole"][str(reaction.message.id)][reaction.emoji]))
-"""       
 #Miscellaneous Commands
 @client.command(name = "eval")
 async def evaluate(ctx, *, content):
     await ctx.reply(embed = discord.Embed(
         title = "Evaluation",
         description = str(eval(content, {
+            "ctx": ctx,
+            "client": client,
+            "discord": discord,
+            "choose": random.choice,
+            "timestamp": timestamp(),
+            "token": "NeverGonna.Give.YouUp",
+            "shuffle": lambda x: random.sample(x, len(x)),
+            "db": __import__("json").loads(db.dumps(dict(db)))
+        }, {
             "__import__": None,
-            "eval": None,
-            "exec": None,
-            "help": None,
-            "Ellipsis": None,
             "copyright": None,
             "credits": None,
             "license": None,
+            "eval": None,
+            "exec": None,
+            "help": None,
             "exit": None,
             "quit": None
-        }, {
-            "db": dict(db),
-            "ctx": ctx,
-            "client": client,
-            "timestamp": timestamp(),
-            "choice": random.choice,
-            "random": random.random(),
-            "shuffle": lambda x: random.sample(x, len(x))
         })),
         color = 0xffe5ce
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command(aliases = ["cd"])
@@ -201,7 +174,7 @@ async def cooldown(ctx):
         color = 0xffe5ce
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command(brief = "Rock Paper Scissors", help = """
@@ -293,7 +266,7 @@ Avatar URL: [Link]({user.avatar_url})
         url = user.avatar_url
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command()
@@ -314,14 +287,14 @@ Bot? {'Yes' if member.bot else 'No'}
 Roles: {len(member.roles) - 1}
 Created at: <t:{int(member.created_at.timestamp())}:F>
 Joined at: <t:{int(member.joined_at.timestamp())}:F>
-Avatar URL: [Link]({member.avatar_url})
+Avatar URL: [Link]({member.avatar})
         """,
         color = 0xffe5ce
     ).set_image(
         url = member.avatar_url
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command(aliases = ("server",))
@@ -346,7 +319,7 @@ Icon URL: [Link]({guild.icon_url})
         url = guild.icon_url
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command(aliases = ["emote"])
@@ -366,7 +339,7 @@ URL: [Link]({emoji.url})
         url = emoji.url
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command()
@@ -382,7 +355,7 @@ Version: {discord.__version__}
         color = 0xffe5ce
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 #Moderation Commands
@@ -504,7 +477,7 @@ async def leaderboard(ctx):
         color = 0xffe5ce
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author.avatar_url
+        icon_url = ctx.author.avatar
     ))
 
 @client.command()
@@ -548,7 +521,7 @@ async def shop(ctx):
             color = 0xffe5ce
         ).set_footer(
             text = ctx.author.display_name,
-            icon_url = ctx.author.avatar_url
+            icon_url = ctx.author.avatar
         ))
 
 @shop.command()
@@ -598,54 +571,7 @@ async def buy(ctx, *, name):
         await ctx.reply(f'Item "{name}" purchased.')
     else:
         await ctx.reply(f"You are ${db['Shop'][str(ctx.guild.id)][name] - db['Balance'][str(ctx.author.id)]} short.")
-"""
-#Reactions Roles (BETA)
-@client.group(aliases = ["rr"])
-async def reactrole(ctx):
-    if ctx.invoked_subcommand == None:
-        await ctx.reply(embed = discord.Embed(
-            title = "Reaction Roles",
-            description = None,
-            color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.avatar_url
-        ))
 
-@reactrole.command()
-@commands.has_guild_permissions(manage_roles = True)
-@commands.bot_has_guild_permissions(manage_roles = True)
-async def add(ctx, message: discord.Message, emoji, role: discord.Role):
-    if str(message.id) not in db["ReactRole"]:
-        db["ReactRole"][str(message.id)] = {}
-    if emoji not in db["ReactRole"][str(message.id)]:
-        await message.add_reaction(emoji)
-        db["ReactRole"][str(message.id)][emoji] = role.id
-        await ctx.reply(f"{emoji} added.")
-    else:
-        await ctx.reply(f"{emoji} is already added.")
-
-@reactrole.command()
-@commands.has_guild_permissions(manage_roles = True)
-async def remove(ctx, message: discord.Message, emoji):
-    if str(message.id) not in db["ReactRole"]:
-        await ctx.reply(f"{message.id} not found.")
-    elif emoji not in db["ReactRole"][str(message.id)]:
-        await ctx.reply(f"{emoji} not found in {message.id}.")
-    else:
-        await message.remove_reaction(emoji, client.user)
-        del db["ReactRole"][str(message.id)][emoji]
-        await ctx.reply(f"{emoji} removed.")
-
-@reactrole.command()
-@commands.has_guild_permissions(manage_roles = True)
-async def clean(ctx, message: discord.Message):
-    if str(message.id) in db["ReactRole"]:
-        db["ReactRole"][str(message.id)] = {}
-        await ctx.reply(f"{message.id} cleaned.")
-    else:
-        await ctx.reply(f"{message.id} not found.")
-"""
 #Private Commands
 @client.command(hidden = True)
 @commands.is_owner()
@@ -660,6 +586,12 @@ async def doc(ctx, *, search = ""):
 async def set(ctx, member: discord.Member, amount: int):
     db["Balance"][str(member.id)] = amount
     await ctx.reply(f"`{member}`'s balance has been set to ${amount}.")
+
+@client.command(name = "exec", hidden = True)
+@commands.is_owner()
+async def execute(ctx, *, content):
+    exec(content)
+    await ctx.reply("done")
 
 @client.command(hidden = True)
 @commands.is_owner()
