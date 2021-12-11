@@ -166,6 +166,31 @@ async def evaluate(ctx, *, content):
         icon_url = ctx.author.avatar
     ))
 
+@client.command(hidden = True)
+async def select(ctx):
+    view = discord.ui.View(timeout = 60)
+    view.add_item(discord.ui.Select(placeholder = "Select an option", options = [discord.SelectOption(
+        label = "Option 1",
+        emoji = "1️⃣",
+        value = "1"
+    ), discord.SelectOption(
+        label = "Option 2",
+        emoji = "2️⃣",
+        value = "2"
+    ), discord.SelectOption(
+        label = "Option 3",
+        emoji = "3️⃣",
+        value = "3"
+    )]))
+    message = await ctx.send("Select Menu", view = view)
+    while True:
+        try:
+            interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+            await interaction.followup.send(f"You selected Option {view.children[0].values[0]}!", ephemeral = True)
+        except __import__("asyncio").TimeoutError:
+            view.stop()
+            break
+
 @client.command(aliases = ["cd"])
 async def cooldown(ctx):
     await ctx.reply(embed = discord.Embed(
@@ -177,47 +202,13 @@ async def cooldown(ctx):
         icon_url = ctx.author.avatar
     ))
 
-@client.command(brief = "Rock Paper Scissors", help = """
- - Rock & Rock: Tie
- - Rock & Paper: Lose
- - Rock & Scissors: Win
- - Paper & Rock: Win
- - Paper & Paper: Tie
- - Paper & Scissors: Lose
- - Scissors & Rock: Lose
- - Scissors & Paper: Win
- - Scissors & Scissors: Tie""")
-@commands.bot_has_permissions(add_reactions = True)
+@client.command()
 async def rps(ctx, member: discord.Member = None):
     if member == None:
         member = client.user
     if member == ctx.author:
         return await ctx.reply("You can't play against yourself.")
-    moves = ("🪨", "📄", "✂️")
-    try:
-        message = await ctx.reply("Choose a move by reacting to one of the reactions down below:")
-        for emoji in moves:
-            await message.add_reaction(emoji)
-        reaction, user = await client.wait_for("reaction_add", check = lambda reaction, user: str(reaction.emoji) in moves and reaction.message == message and user == ctx.author, timeout = 30)
-        await message.delete()
-        p1 = moves.index(str(reaction.emoji))
-        if member.bot:
-            p2 = random.randint(0, 2)
-        else:
-            message = await ctx.send(f"{member.mention} Choose a move by reacting to one of the reactions down below:")
-            for emoji in moves:
-                await message.add_reaction(emoji)
-            reaction, user = await client.wait_for("reaction_add", check = lambda reaction, user: str(reaction.emoji) in moves and reaction.message == message and user == member, timeout = 30)
-            await message.delete()
-            p2 = moves.index(str(reaction.emoji))
-        if p1 - p2 in (-2, 1):
-            await ctx.reply(f"{ctx.author.display_name} wins!\n\n{ctx.author.display_name}: {moves[p1]} | {member.display_name}: {moves[p2]}")
-        elif p1 - p2 in (-1, 2):
-            await ctx.reply(f"{member.display_name} wins!\n\n{ctx.author.display_name}: {moves[p1]} | {member.display_name}: {moves[p2]}")
-        else:
-            await ctx.reply( f"It's a tie!\n\n{ctx.author.display_name}: {moves[p1]} | {member.display_name}: {moves[p2]}")
-    except __import__("asyncio").TimeoutError:
-        await message.edit(content = "You didn't reply in time.")
+    message = await ctx.reply("currently remaking")
 
 @client.command()
 async def embed(ctx, title: str = "", description: str = "", url: str = ""):
@@ -243,7 +234,13 @@ async def embed(ctx, title: str = "", description: str = "", url: str = ""):
 
 @client.command()
 async def invite(ctx):
-    await ctx.reply("<https://Senjibot.senjienji.repl.co/invite>")
+    view = discord.ui.View()
+    view.add_item(discord.ui.Button(
+        label = "Invite",
+        url = "https://Senjibot.senjienji.repl.co/invite",
+        style = discord.ButtonStyle.link
+    ))
+    await ctx.reply("<https://Senjibot.senjienji.repl.co/invite>", view = view)
 
 #Informational Commands
 @client.command()
@@ -259,11 +256,11 @@ Tag: #{user.discriminator}
 ID: {user.id}
 Bot? {'Yes' if user.bot else 'No'}
 Created at: <t:{int(user.created_at.timestamp())}:F>
-Avatar URL: [Link]({user.avatar_url})
+Avatar URL: [Link]({user.avatar})
         """,
         color = 0xffe5ce
     ).set_image(
-        url = user.avatar_url
+        url = user.avatar
     ).set_footer(
         text = ctx.author.display_name,
         icon_url = ctx.author.avatar
@@ -291,7 +288,7 @@ Avatar URL: [Link]({member.avatar})
         """,
         color = 0xffe5ce
     ).set_image(
-        url = member.avatar_url
+        url = member.avatar
     ).set_footer(
         text = ctx.author.display_name,
         icon_url = ctx.author.avatar
@@ -312,11 +309,11 @@ Channels: {len(guild.text_channels)} text, {len(guild.voice_channels)} voice
 Roles: {len(guild.roles) - 1}
 Owner: {guild.owner.mention} ({guild.owner})
 Created at: <t:{int(guild.created_at.timestamp())}:F>
-Icon URL: [Link]({guild.icon_url})
+Icon URL: [Link]({guild.icon})
         """,
         color = 0xffe5ce
     ).set_image(
-        url = guild.icon_url
+        url = guild.icon
     ).set_footer(
         text = ctx.author.display_name,
         icon_url = ctx.author.avatar
@@ -577,9 +574,9 @@ async def buy(ctx, *, name):
 @commands.is_owner()
 async def doc(ctx, *, search = ""):
     if search == "":
-        await ctx.reply("https://discordpy.readthedocs.io/en/stable/")
+        await ctx.reply("https://discordpy.readthedocs.io/en/master/api.html")
     else:
-        await ctx.reply(f"https://discordpy.readthedocs.io/en/stable/search.html?q={search.replace(' ', '+')}")
+        await ctx.reply(f"https://discordpy.readthedocs.io/en/master/search.html?q={search.replace(' ', '+')}")
 
 @client.command(hidden = True)
 @commands.is_owner()
