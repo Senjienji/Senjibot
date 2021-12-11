@@ -6,14 +6,10 @@ from replit import db
 from time import time as timestamp
 import random
 
-newline = "\n"
-
 if "Prefix" not in db:
     db["Prefix"] = {} #{"guild_id": "prefix"}
 if "Balance" not in db:
     db["Balance"] = {} #{"user_id": amount}
-if "Shop" not in db:
-    db["Shop"] = {} #{"guild_id": {"name": price}}
 if "Enabled" not in db:
     db["Enabled"] = {} #{"guild_id": {"command_name": enabled}}
 
@@ -41,8 +37,7 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
 Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{self.context.command.name} {group.name} [command]` for more info on a command.
 
 **Commands**
-{newline.join(f"{self.context.bot.command_prefix(self.context.bot, self.context.message)}{group.name} {command.name}" for command in group.commands)}
-            """,
+""" + "\n".join(f"{self.context.bot.command_prefix(self.context.bot, self.context.message)}{group.name} {command.name}" for command in group.commands),
             color = 0xffe5ce
         ).set_footer(
             text = self.context.author.display_name,
@@ -146,7 +141,7 @@ async def evaluate(ctx, *, content):
             "discord": discord,
             "choose": random.choice,
             "timestamp": timestamp(),
-            "token": "NeverGonna.Give.YouUp",
+            "token": "||NeverGonnaGiveYouUp.NeverGonnaLetYouDown.NeverGonnaRunAroundAndDesertYou||",
             "shuffle": lambda x: random.sample(x, len(x)),
             "db": __import__("json").loads(db.dumps(dict(db)))
         }, {
@@ -158,7 +153,8 @@ async def evaluate(ctx, *, content):
             "exec": None,
             "help": None,
             "exit": None,
-            "quit": None
+            "quit": None,
+            "open": None
         })),
         color = 0xffe5ce
     ).set_footer(
@@ -172,21 +168,18 @@ async def select(ctx):
     view.add_item(discord.ui.Select(placeholder = "Select an option", options = [discord.SelectOption(
         label = "Option 1",
         emoji = "1️⃣",
-        value = "1"
     ), discord.SelectOption(
         label = "Option 2",
         emoji = "2️⃣",
-        value = "2"
     ), discord.SelectOption(
         label = "Option 3",
         emoji = "3️⃣",
-        value = "3"
     )]))
     message = await ctx.send("Select Menu", view = view)
     while True:
         try:
             interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
-            await interaction.followup.send(f"You selected Option {view.children[0].values[0]}!", ephemeral = True)
+            await interaction.followup.send(f"You selected {view.children[0].values[0]}!", ephemeral = True)
         except __import__("asyncio").TimeoutError:
             view.stop()
             break
@@ -462,15 +455,44 @@ async def balance(ctx, *, member: discord.Member = None):
     if member.bot:
         raise commands.BadArgument("member must not be a bot")
     if str(member.id) not in db["Balance"]:
-        db["Balance"][str(member.id)] = 0
-    await ctx.reply(f"`{member}` have ${db['Balance'][str(member.id)]}.")
+        db["Balance"][str(member.id)] = {"wallet": 0, "bank": 0}
+    await ctx.reply(embed = discord.Embed(
+        title = f"{member.display_name}'s Balance",
+        description = f"""
+Wallet: ${db['Balance'][str(member.id)]['wallet']}
+Bank: ${db['Balance'][str(member.id)]['bank']}
+        """,
+        color = 0xffe5ce
+    ))
+
+@client.command(aliases = ["dep"])
+async def deposit(ctx, amount: int):
+    if str(ctx.author.id) not in db["Balance"]:
+        db["Balance"][str(ctx.author.id)] = {"wallet": 0, "bank": 0}
+    if db["Balance"][str(ctx.author.id)]["wallet"] >= amount:
+        db["Balance"][str(ctx.author.id)]["bank"] += amount
+        db["Balance"][str(ctx.author.id)]["wallet"] -= amount
+        await ctx.reply(f'insert "deposited ${amount}" message here')
+    else:
+        await ctx.reply('insert "not enough wallet money" message here')
+
+@client.command(aliases = ["with"])
+async def withdraw(ctx, amount: int):
+    if str(ctx.author.id) not in db["Balance"]:
+        db["Balance"][str(ctx.author.id)] = {"wallet": 0, "bank": 0}
+    if db["Balance"][str(ctx.author.id)]["bank"] >= amount:
+        db["Balance"][str(ctx.author.id)]["wallet"] += amount
+        db["Balance"][str(ctx.author.id)]["bank"] -= amount
+        await ctx.reply(f'insert "withdrawn ${amount}" message here')
+    else:
+        await ctx.reply('insert "not enough bank balance" message here')
 
 @client.command(aliases = ["lb"])
 @commands.guild_only()
 async def leaderboard(ctx):
     await ctx.reply(embed = discord.Embed(
         title = "Leaderboard",
-        description = "\n".join(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, [(ctx.guild.get_member(int(i[0])), i[1]) for i in db["Balance"].items()]), key = lambda i: i[1], reverse = True), start = 1)),
+        description = "\n".join(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, ((ctx.guild.get_member(int(i[0])), i[1]["wallet"]) for i in db["Balance"].items())), key = lambda i: i[1], reverse = True), start = 1)),
         color = 0xffe5ce
     ).set_footer(
         text = ctx.author.display_name,
@@ -481,93 +503,50 @@ async def leaderboard(ctx):
 @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
 async def work(ctx):
     if str(ctx.author.id) not in db["Balance"]:
-        db["Balance"][str(ctx.author.id)] = 0 
+        db["Balance"][str(ctx.author.id)] = {"wallet": 0, "bank": 0}
     gain = random.randint(500, 1000)
-    db["Balance"][str(ctx.author.id)] += gain
+    db["Balance"][str(ctx.author.id)]["wallet"] += gain
     await ctx.reply(f"You got ${gain}.")
 
 @client.command()
 async def gamble(ctx, amount: int):
     if str(ctx.author.id) not in db["Balance"]:
-        db["Balance"][str(ctx.author.id)] = 0
+        db["Balance"][str(ctx.author.id)] = {"wallet": 0, "bank": 0}
     if amount < 1:
         await ctx.reply("amount must be higher than 0.")
-    elif db["Balance"][str(ctx.author.id)] >= amount:
+    elif db["Balance"][str(ctx.author.id)]["wallet"] >= amount:
         p1, p2 = (random.randint(2, 12), random.randint(2, 12))
         if p1 > p2:
-            db["Balance"][str(ctx.author.id)] += amount
+            db["Balance"][str(ctx.author.id)]["wallet"] += amount
             await ctx.reply(f"You won ${amount}!\n\n{ctx.author.name}: {p1}\n{client.user.name}: {p2}")
         elif p1 < p2:
-            db["Balance"][str(ctx.author.id)] -= amount
+            db["Balance"][str(ctx.author.id)]["wallet"] -= amount
             await ctx.reply(f"You lost ${amount}.\n\n{ctx.author.name}: {p1}\n{client.user.name}: {p2}")
         else:
             await ctx.reply(f"It's a tie?\n\n{ctx.author.name}: {p1}\n{client.user.name}: {p2}")
     else:
-        await ctx.reply(f"You are ${amount - db['Balance'][str(ctx.author.id)]} short.")
-
-#Shop Commands
-@client.group()
-@commands.guild_only()
-async def shop(ctx):
-    if str(ctx.guild.id) not in db["Shop"]:
-        db["Shop"][str(ctx.guild.id)] = {"nothing": 0} #{"name": price}
-    if ctx.invoked_subcommand == None:
-        await ctx.reply(embed = discord.Embed(
-            title = "Shop",
-            description = "\n".join(f"{index}. `{name}`: ${price}" for index, (name, price) in enumerate(sorted(db["Shop"][str(ctx.guild.id)].items(), key = lambda i: i[1]), start = 1)),
-            color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.avatar
-        ))
-
-@shop.command()
-@commands.has_guild_permissions(manage_guild = True)
-async def add(ctx, name, price: int):
-    if name in db["Shop"][str(ctx.guild.id)]:
-        await ctx.reply(f'Item "{name}" is already added.')
-    elif price >= 0:
-        db["Shop"][str(ctx.guild.id)][name] = price
-        await ctx.reply(f'Item "{name}" added.')
-    else:
-        await ctx.reply("price must be greater than -1.")
-
-@shop.command()
-@commands.has_guild_permissions(manage_guild = True)
-async def edit(ctx, name, other):
-    if name not in db["Shop"][str(ctx.guild.id)]:
-        await ctx.reply(f'Item "{name}" not found.')
-    elif other.isnumeric():
-        db["Shop"][str(ctx.guild.id)][name] = int(other)
-        await ctx.reply(f'Item "{name}" edited.')
-    else:
-        db["Shop"][str(ctx.guild.id)][other] = db["Shop"][str(ctx.guild.id)][name]
-        del db["Shop"][str(ctx.guild.id)][name]
-        await ctx.reply(f'Item "{name}" edited to "{other}".')
-
-@shop.command()
-@commands.has_guild_permissions(manage_guild = True)
-async def remove(ctx, *, name):
-    if name in db["Shop"][str(ctx.guild.id)]:
-        del db["Shop"][str(ctx.guild.id)][name]
-        await ctx.reply(f'Item "{name}" removed.')
-    else:
-        await ctx.reply(f'Item "{name}" not found.')
+        await ctx.reply(f"You are ${amount - db['Balance'][str(ctx.author.id)]['wallet']} short.")
 
 @client.command()
-@commands.guild_only()
-async def buy(ctx, *, name):
+async def rob(ctx, member: discord.Member):
     if str(ctx.author.id) not in db["Balance"]:
-        db["Balance"][str(ctx.author.id)] = 0
-    if str(ctx.guild.id) not in db["Shop"]:
-        db["Shop"][str(ctx.guild.id)] = {"nothing": 0} #{"name": price}
-    if name not in db["Shop"][str(ctx.guild.id)]:
-        await ctx.reply(f'Item "{name}" not found.')
-    elif db["Balance"][str(ctx.author.id)] >= db["Shop"][str(ctx.guild.id)][name]:
-        db["Balance"][str(ctx.author.id)] -= db["Shop"][str(ctx.guild.id)][name]
-        await ctx.reply(f'Item "{name}" purchased.')
+        db["Balance"][str(ctx.author.id)] = {"wallet": 0, "bank": 0}
+    if str(member.id) not in db["Balance"]:
+        db["Balance"][str(member.id)] = {"wallet": 0, "bank": 0}
+    if db["Balance"][str(ctx.author.id)]["wallet"] >= 500:
+        if db["Balance"][str(member.id)]["wallet"] >= 1000:
+            if random.randint(1, 100) >= 50:
+                gain = random.randint(1000, db["Balance"][str(member.id)]["wallet"])
+                db["Balance"][str(ctx.author.id)]["wallet"] += gain
+                db["Balance"][str(member.id)]["wallet"] -= gain
+                await ctx.reply(f"Successfully robbed ${gain}.")
+            else:
+                db["Balance"][str(ctx.author.id)]["wallet"] -= 500
+                await ctx.reply("You got caught and lost $500.")
+        else:
+            await ctx.reply("Your target has less than $1000.")
     else:
-        await ctx.reply(f"You are ${db['Shop'][str(ctx.guild.id)][name] - db['Balance'][str(ctx.author.id)]} short.")
+        await ctx.reply("You need at least $500 to rob someone.")
 
 #Private Commands
 @client.command(hidden = True)
@@ -580,9 +559,12 @@ async def doc(ctx, *, search = ""):
 
 @client.command(hidden = True)
 @commands.is_owner()
-async def set(ctx, member: discord.Member, amount: int):
-    db["Balance"][str(member.id)] = amount
-    await ctx.reply(f"`{member}`'s balance has been set to ${amount}.")
+async def set(ctx, member: discord.Member, type, amount: int):
+    try:
+        db["Balance"][str(member.id)][type] = amount
+        await ctx.reply(f"`{member}`'s {type} balance has been set to ${amount}.")
+    except KeyError:
+        await ctx.reply("invalid type")
 
 @client.command(name = "exec", hidden = True)
 @commands.is_owner()
