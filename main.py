@@ -183,9 +183,37 @@ async def math(ctx):
             embed.title = "Invalid number passed."
         await message.reply(embed = embed)
     except __import__("asyncio").TimeoutError:
-        await ctx.reply("You didn't reply in time.")
+        await reply.edit(content = "You didn't reply in time.")
 
-
+@client.command()
+async def rps(ctx):
+    view = discord.ui.View(timeout = 60)
+    view.add_item(discord.ui.Select(placeholder = "Select a move", options = [discord.SelectOption(
+        label = "Rock",
+        emoji = "🪨"
+    ), discord.SelectOption(
+        label = "Paper",
+        emoji = "📄"
+    ), discord.SelectOption(
+        label = "Scissors",
+        emoji = "✂️"
+    )]))
+    message = await ctx.reply("Select a move", view = view)
+    try:
+        interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+        moves = ("Rock", "Paper", "Scissors")
+        p1 = moves.index(view.children[0].values[0])
+        p2 = random.randint(0, 2)
+        if p1 - p2 in (-2, 1):
+            content = "You won!"
+        elif p1 - p2 in (-1, 2):
+            content = "You lose!"
+        else:
+            content = "It's a tie!"
+        content += f"\n\n{moves[p1]} | {moves[p2]}"
+        await message.edit(content = content, view = None)
+    except __import__("asyncio").TimeoutError:
+        await message.edit(content = "You didn't select in time.", view = None)
 @client.command(hidden = True)
 async def select(ctx):
     view = discord.ui.View(timeout = None)
@@ -220,34 +248,16 @@ async def cooldown(ctx):
     ))
 
 @client.command()
-async def rps(ctx, member: discord.Member = None):
-    if member == None:
-        member = client.user
-    if member == ctx.author:
-        return await ctx.reply("You can't play against yourself.")
-    message = await ctx.reply("currently remaking")
-
-@client.command()
-async def embed(ctx, title: str = "", description: str = "", url: str = ""):
-    if title + description == "":
-        raise commands.MissingRequiredArgument(__import__("inspect").Parameter("title" if title == "" else "description", __import__("inspect").Parameter.VAR_POSITIONAL))
+async def embed(ctx, title, description, footer):
     embed = discord.Embed(
-       title = title,
+        title = title,
         description = description,
         color = 0xffe5ce
     )
-    if url != "":
-        embed.set_image(
-            url = url
-        )
-    elif ctx.message.attachments != []:
-        embed.set_image(
-            url = ctx.message.attachments[0].url
-        )
-    if ctx.message.reference != None and ctx.message.reference.resolved != None and ctx.message.reference.resolved.author in (client.user, ctx.author):
-        await ctx.message.reference.resolved.edit(embed = embed)
-    else:
-        await ctx.send(embed = embed)
+    embed.set_footer(text = footer)
+    if ctx.message.attachments != []:
+        embed.set_image(url = ctx.message.attachments[0].url)
+    await ctx.send(embed = embed)
 
 @client.command()
 async def invite(ctx):
