@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "senjibot"
+name = "repl_python3_Senjibot"
 version = "0.1.0"
 description = ""
 authors = ["Senjienji <<>>"]
@@ -9,6 +9,7 @@ python = "^3.8"
 "discord.py" = {git = "https://github.com/Rapptz/discord.py"}
 Flask = "^2.0.2"
 replit = "^3.2.4"
+discord = "^1.7.3"
 
 [tool.poetry.dev-dependencies]
 

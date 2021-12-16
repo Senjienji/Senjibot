@@ -1,17 +1,16 @@
 import discord
 from discord.ext import commands
 from webserver import keep_alive
-from inspect import Parameter
 from replit import db
 from time import time as timestamp
 import random
 
 if "Prefix" not in db:
-    db["Prefix"] = {} #{"guild_id": "prefix"}
+    db["Prefix"] = {} #{"guild.id": "prefix"}
 if "Balance" not in db:
-    db["Balance"] = {} #{"user_id": amount}
+    db["Balance"] = {} #{"user.id": amount}
 if "Enabled" not in db:
-    db["Enabled"] = {} #{"guild_id": {"command_name": enabled}}
+    db["Enabled"] = {} #{"guild.id": {"command": enabled}}
 
 class HelpCommand(commands.HelpCommand):
     async def send_bot_help(self, mapping):
@@ -141,10 +140,11 @@ async def evaluate(ctx, *, content):
             "discord": discord,
             "choose": random.choice,
             "timestamp": timestamp(),
-            "token": "||NeverGonnaGiveYouUp.NeverGonnaLetYouDown.NeverGonnaRunAroundAndDesertYou||",
+            "format": __import__("json").dumps,
             "shuffle": lambda x: random.sample(x, len(x)),
-            "db": __import__("json").loads(db.dumps(dict(db)))
+            "db": __import__("json").loads(db.dumps(dict(db))),
         }, {
+            "print": (print if await client.is_owner(ctx.author) else None),
             "__import__": None,
             "copyright": None,
             "credits": None,
@@ -162,9 +162,33 @@ async def evaluate(ctx, *, content):
         icon_url = ctx.author.avatar
     ))
 
+@client.command()
+async def math(ctx):
+    equation = f"{random.randint(1, 99)} {random.choice(('+', '-', '*', '//'))} {random.randint(1, 99)}"
+    reply = await ctx.reply(f"{equation} = ?")
+    try:
+        message = await client.wait_for("message", check = lambda message: message.channel == ctx.channel and message.author == ctx.author, timeout = 60)
+        embed = discord.Embed(
+            description = f"{equation} = {eval(equation)}",
+            color = 0xffe5ce
+        ).set_footer(
+            text = f"{int((message.created_at - reply.created_at).total_seconds())} seconds"
+        )
+        try:
+            if int(message.content) == eval(equation):
+                embed.title = "Correct!"
+            else:
+                embed.title = "Wrong!"
+        except ValueError:
+            embed.title = "Invalid number passed."
+        await message.reply(embed = embed)
+    except __import__("asyncio").TimeoutError:
+        await ctx.reply("You didn't reply in time.")
+
+
 @client.command(hidden = True)
 async def select(ctx):
-    view = discord.ui.View(timeout = 60)
+    view = discord.ui.View(timeout = None)
     view.add_item(discord.ui.Select(placeholder = "Select an option", options = [discord.SelectOption(
         label = "Option 1",
         emoji = "1️⃣",
@@ -175,10 +199,10 @@ async def select(ctx):
         label = "Option 3",
         emoji = "3️⃣",
     )]))
-    message = await ctx.send("Select Menu", view = view)
+    message = await ctx.reply("Select Menu", view = view)
     while True:
         try:
-            interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+            interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 10)
             await interaction.followup.send(f"You selected {view.children[0].values[0]}!", ephemeral = True)
         except __import__("asyncio").TimeoutError:
             view.stop()
@@ -206,9 +230,9 @@ async def rps(ctx, member: discord.Member = None):
 @client.command()
 async def embed(ctx, title: str = "", description: str = "", url: str = ""):
     if title + description == "":
-        raise commands.MissingRequiredArgument(Parameter("title" if title == "" else "description", Parameter.VAR_POSITIONAL))
+        raise commands.MissingRequiredArgument(__import__("inspect").Parameter("title" if title == "" else "description", __import__("inspect").Parameter.VAR_POSITIONAL))
     embed = discord.Embed(
-        title = title,
+       title = title,
         description = description,
         color = 0xffe5ce
     )
@@ -573,7 +597,6 @@ async def execute(ctx, *, content):
     await ctx.reply("done")
 
 @client.command(hidden = True)
-@commands.is_owner()
 async def invites(ctx, *, guild: discord.Guild):
     try:
         invites = await guild.invites()
