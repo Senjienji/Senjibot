@@ -112,9 +112,9 @@ async def on_command_error(ctx, error):
     elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)) or str(error) == f"The global check functions for command {ctx.command.name} failed.":
         return
     try:
-        message = await ctx.reply(content)
+        await ctx.reply(content)
     except discord.HTTPException:
-        message = await ctx.send(f"{ctx.author.mention} {content}")
+        await ctx.send(f"{ctx.author.mention} {content}")
     except discord.Forbidden:
         try:
             return await ctx.author.send(f"> {ctx.channel.mention}: {ctx.message.content}\n{content}")
@@ -142,7 +142,7 @@ async def evaluate(ctx, *, content):
             "timestamp": timestamp(),
             "format": __import__("json").dumps,
             "shuffle": lambda x: random.sample(x, len(x)),
-            "db": __import__("json").loads(db.dumps(dict(db))),
+            "db": __import__("json").loads(db.dumps(dict(db)))
         }, {
             "print": (print if await client.is_owner(ctx.author) else None),
             "__import__": None,
@@ -186,7 +186,11 @@ async def math(ctx):
         await reply.edit(content = "You didn't reply in time.")
 
 @client.command()
-async def rps(ctx):
+async def rps(ctx, member: discord.Member = None):
+    if member == None:
+        member = client.user
+    if member == ctx.author:
+        return await ctx.reply("no")
     view = discord.ui.View(timeout = 60)
     view.add_item(discord.ui.Select(placeholder = "Select a move", options = [discord.SelectOption(
         label = "Rock",
@@ -198,22 +202,31 @@ async def rps(ctx):
         label = "Scissors",
         emoji = "✂️"
     )]))
-    message = await ctx.reply("Select a move", view = view)
+    message = await ctx.reply(f"{ctx.author.mention} Select a move:", view = view)
     try:
-        interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+        interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message and interaction.user == ctx.author, timeout = 60)
         moves = ("Rock", "Paper", "Scissors")
         p1 = moves.index(view.children[0].values[0])
-        p2 = random.randint(0, 2)
+        if member.bot:
+            p2 = random.randint(0, 2)
+        else:
+            await message.edit(content = f"{member.mention} Select a move:")
+            try:
+                interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message and interaction.user == member, timeout = 60)
+                p2 = moves.index(view.children[0].values[0])
+            except __import__("asyncio").TimeoutError:
+                return await message.edit(content = f"{member.mention} You didn't select in time.", view = None)
         if p1 - p2 in (-2, 1):
             content = "You won!"
         elif p1 - p2 in (-1, 2):
             content = "You lose!"
         else:
             content = "It's a tie!"
-        content += f"\n\n{moves[p1]} | {moves[p2]}"
+        content += f"\n\n`{ctx.author.display_name}`: {moves[p1]}\n`{member.display_name}`: {moves[p2]}"
         await message.edit(content = content, view = None)
     except __import__("asyncio").TimeoutError:
-        await message.edit(content = "You didn't select in time.", view = None)
+        await message.edit(content = f"{ctx.author.mention} You didn't select in time.", view = None)
+
 @client.command(hidden = True)
 async def select(ctx):
     view = discord.ui.View(timeout = None)
