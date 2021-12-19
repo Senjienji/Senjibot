@@ -28,7 +28,7 @@ def home():
 
 @app.route("/invite")
 def invite():
-    return redirect(discord.utils.oauth_url(893338697947316225, permissions = discord.Permissions(
+    return redirect(discord.utils.oauth_url(922077126579060788, permissions = discord.Permissions(
         manage_roles = True,
         kick_members = True,
         ban_members = True,
