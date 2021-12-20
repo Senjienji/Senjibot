@@ -91,7 +91,7 @@ async def is_enabled(ctx):
     return db["Enabled"][str(ctx.guild.id)][ctx.command.name]
 
 @client.before_invoke
-async def trigger_typing(ctx):
+async def before_invoke(ctx):
     if random.randint(0, 100) < 20:
         await ctx.reply("""
 **WARNING**
@@ -668,6 +668,7 @@ async def remove(ctx, *, name):
     else:
         await ctx.reply(f'Item "{name}" not found.')
 
+#Private Commands
 @client.command(hidden = True)
 @commands.is_owner()
 async def doc(ctx, *, search = ""):
