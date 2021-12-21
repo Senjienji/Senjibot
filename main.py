@@ -92,7 +92,7 @@ async def is_enabled(ctx):
 
 @client.before_invoke
 async def before_invoke(ctx):
-    if random.randint(0, 100) < 20:
+    if random.randint(0, 100) < 20 and ctx.command.name != "purge":
         await ctx.reply("""
 **WARNING**
 This bot will be scheduled for deletion in <t:1640995200:D>,
@@ -147,7 +147,7 @@ async def evaluate(ctx, *, content):
             "client": client,
             "discord": discord,
             "choose": random.choice,
-            "timestamp": timestamp(),
+            "timestamp": timestamp,
             "shuffle": lambda x: random.sample(x, len(x)),
             "db": __import__("json").loads(db.dumps(dict(db)))
         }, {
@@ -474,7 +474,7 @@ async def enable(ctx, command):
 @commands.has_guild_permissions(manage_guild = True)
 async def disable(ctx, command):
     if command.lower() in (command.name for command in client.commands):
-        if command in ("enable", "disable", "help"):
+        if command.lower() in ("enable", "disable", "help"):
             await ctx.reply("Cannot disable this command.")
         else:
             db["Enabled"][str(ctx.guild.id)][command.lower()] = False
@@ -486,7 +486,7 @@ async def disable(ctx, command):
 @commands.guild_only()
 @commands.has_permissions(manage_messages = True)
 @commands.bot_has_permissions(manage_messages = True, read_message_history = True)
-async def purge(ctx, limit: str):
+async def purge(ctx, limit):
     if limit.lower() in ("all", "max", "maximum"):
         limit = len(await ctx.channel.history(limit = None).flatten())
     else:
@@ -581,6 +581,7 @@ async def gamble(ctx, amount: int):
 
 @client.command()
 @commands.guild_only()
+@commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
 async def rob(ctx, member: discord.Member):
     if str(ctx.author.id) not in db["Balance"]:
         db["Balance"][str(ctx.author.id)] = {"wallet": 0, "bank": 0}
