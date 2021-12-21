@@ -236,22 +236,16 @@ async def rps(ctx, member: discord.Member = None):
 
 @client.command(hidden = True)
 async def select(ctx):
+    menu = discord.ui.Select(placeholder = "Select an option", max_values = 25)
+    for i in range(25):
+        menu.add_option(label = f"Option {i + 1}")
     view = discord.ui.View(timeout = 60)
-    view.add_item(discord.ui.Select(placeholder = "Select an option", options = [discord.SelectOption(
-        label = "Option 1",
-        emoji = "1️⃣",
-    ), discord.SelectOption(
-        label = "Option 2",
-        emoji = "2️⃣",
-    ), discord.SelectOption(
-        label = "Option 3",
-        emoji = "3️⃣",
-    )]))
+    view.add_item(menu)
     message = await ctx.reply("Select Menu", view = view)
     while True:
         try:
-            interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
-            await interaction.followup.send(f"You selected {view.children[0].values[0]}!", ephemeral = True)
+            interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 1 * 60 * 60)
+            await interaction.followup.send(f"You selected {', '.join(view.children[0].values)}!", ephemeral = True)
         except __import__("asyncio").TimeoutError:
             view.children[0].disable = True
             view.stop()
@@ -602,6 +596,7 @@ async def rob(ctx, member: discord.Member):
     else:
         await ctx.reply("You need at least $500 to rob someone.")
 
+#Shop Commands
 @client.group()
 @commands.guild_only()
 async def shop(ctx):
@@ -616,12 +611,12 @@ async def shop(ctx):
                 label = f"{name}: ${price}",
                 value = name
             )
-        view = discord.ui.View(timeout = 60)
+        view = discord.ui.View(timeout = 1 * 60 * 60)
         view.add_item(menu)
         message = await ctx.reply("Shop", view = view)
         while True:
             try:
-                interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+                interaction = await client.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 1 * 60 * 60)
                 if str(interaction.user.id) not in db["Balance"]:
                     db["Balance"][str(interaction.user.id)] = {"wallet": 0, "bank": 0}
                 if db["Balance"][str(interaction.user.id)]["wallet"] >= db["Shop"][str(ctx.guild.id)][view.children[0].values[0]]:
@@ -668,7 +663,6 @@ async def remove(ctx, *, name):
         await ctx.reply(f'Item "{name}" removed.')
     else:
         await ctx.reply(f'Item "{name}" not found.')
-
 #Private Commands
 @client.command(hidden = True)
 @commands.is_owner()
