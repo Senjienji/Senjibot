@@ -19,7 +19,7 @@ class HelpCommand(commands.HelpCommand):
         await self.context.message.reply(embed = discord.Embed(
             title = "Help",
             description = f"""
-Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{self.context.command.name} <command>` for more info on a command.
+Use `{self.context.prefix}{self.context.command.name} <command>` for more info on a command.
 
 **__Commands__**
 {' '.join(command.name for command in await self.filter_commands(mapping[None], sort = True))}
@@ -33,12 +33,13 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
         await self.context.message.reply(embed = discord.Embed(
             title = "Help",
             description = f"""
-{self.context.bot.command_prefix(self.context.bot, self.context.message)}{group.name}
+{self.context.prefix}{group.name}
 
-Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{self.context.command.name} {group.name} [command]` for more info on a command.
+Use `{self.context.prefix}{self.context.command.name} {group.name} [command]` for more info on a command.
 
 **Commands**
-""" + "\n".join(f"{self.context.bot.command_prefix(self.context.bot, self.context.message)}{group.name} {command.name}" for command in group.commands),
+{chr(10).join(f'{self.context.prefix}{group.name} {command.name}' for command in group.commands)}
+            """,
             color = 0xffe5ce
         ).set_footer(
             text = self.context.author.display_name,
@@ -47,7 +48,7 @@ Use `{self.context.bot.command_prefix(self.context.bot, self.context.message)}{s
     async def send_command_help(self, command):
         await self.context.message.reply(embed = discord.Embed(
             title = "Help",
-            description = f"{self.context.bot.command_prefix(self.context.bot, self.context.message)}{command.name} {command.signature}" + (f"\n**Aliases:** {', '.join(command.aliases)}" if command.aliases != [] else str()),
+            description = f"{self.context.prefix}{command.name} {command.signature}" + (f"\n**Aliases:** {', '.join(command.aliases)}" if command.aliases != [] else str()),
             color = 0xffe5ce
         ).set_footer(
             text = self.context.author.display_name,
@@ -149,8 +150,8 @@ async def evaluate(ctx, *, content):
             "choose": random.choice,
             "timestamp": timestamp,
             "shuffle": lambda x: random.sample(x, len(x)),
-            "db": __import__("json").loads(db.dumps(dict(db)))
-        }, {
+            "db": __import__("json").loads(db.dumps(dict(db))),
+            "replied": (ctx.message.reference.resolved if ctx.message.reference != None else None)        }, {
             "print": (print if await client.is_owner(ctx.author) else None),
             "__import__": None,
             "copyright": None,
@@ -625,7 +626,7 @@ async def shop(ctx):
                 else:
                     await interaction.followup.send(f"You are ${db['Shop'][str(ctx.guild.id)][view.children[0].values[0]] - db['Balance'][str(interaction.user.id)]['wallet']} short.", ephemeral = True)
             except __import__("asyncio").TimeoutError:
-                view.children[0].disable = True
+                menu.disable = True
                 view.stop()
                 break
 
@@ -663,6 +664,7 @@ async def remove(ctx, *, name):
         await ctx.reply(f'Item "{name}" removed.')
     else:
         await ctx.reply(f'Item "{name}" not found.')
+
 #Private Commands
 @client.command(hidden = True)
 @commands.is_owner()
