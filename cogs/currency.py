@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from replit import db
+import asyncio
 import random
 
 if "Currency" not in db:
@@ -13,7 +14,7 @@ class Currency(commands.Cog):
         self.bot = bot
 
     @commands.command(aliases = ["bal"])
-    async def balance(self, ctx, member: discord.Member = None):
+    async def balance(self, ctx, *, member: discord.Member = None):
         if member == None:
             member = ctx.author
         if member.bot:
@@ -36,7 +37,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
     async def leaderboard(self, ctx):
         await ctx.reply(embed = discord.Embed(
             title = "Leaderboard",
-            description = "\n".join(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None, ((ctx.guild.get_member(int(i[0])), i[1][0]) for i in db["Currency"].items())), key = lambda i: i[1], reverse = True), start = 1)),
+            description = "\n".join(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, ((ctx.guild.get_member(int(i[0])), i[1][0]) for i in db["Currency"].items())), key = lambda i: i[1], reverse = True), start = 1)),
             color = 0xffe5ce
         ).set_footer(
             text = ctx.author.display_name,
@@ -44,9 +45,13 @@ Bank: ${db['Currency'][str(member.id)][1]}
         ))
     
     @commands.command(aliases = ["dep"])
-    async def deposit(self, ctx, amount: int):
+    async def deposit(self, ctx, amount):
         if str(ctx.author.id) not in db["Currency"]:
             db["Currency"][str(ctx.author.id)] = [0, 0]
+        if amount.lower() == "all":
+            amount = db["Currency"][str(ctx.author.id)][0]
+        else:
+            amount = int(amount)
         if amount > 0:
             if db["Currency"][str(ctx.author.id)][0] >= amount:
                 db["Currency"][str(ctx.author.id)][0] -= amount
@@ -55,12 +60,16 @@ Bank: ${db['Currency'][str(member.id)][1]}
             else:
                 await ctx.reply(f"You're ${amount - db['Currency'][str(ctx.author.id)][0]} short.")
         else:
-            await ctx.reply("No")
+            await ctx.reply("amount must be greater than 0.")
     
     @commands.command(aliases = ["with"])
-    async def withdraw(self, ctx, amount: int):
+    async def withdraw(self, ctx, amount):
         if str(ctx.author.id) not in db["Currency"]:
             db["Currency"][str(ctx.author.id)] = [0, 0]
+        if amount.lower() == "all":
+            amount = db["Currency"][str(ctx.author.id)][1]
+        else:
+            amount = int(amount)
         if amount > 0:
             if db["Currency"][str(ctx.author.id)][1] >= amount:
                 db["Currency"][str(ctx.author.id)][0] += amount
@@ -71,31 +80,34 @@ Bank: ${db['Currency'][str(member.id)][1]}
         else:
             await ctx.reply("amount must be greater than 0.")
     
-    @commands.command()
+    @commands.command(cooldown_after_parsing = True)
     @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
     async def work(self, ctx):
         if str(ctx.author.id) not in db["Currency"]:
             db["Currency"][str(ctx.author.id)] = [0, 0]
-        gain = random.randint(1, 1000)
+        gain = random.randint(1000, 2500)
         db["Currency"][str(ctx.author.id)][0] += gain
         await ctx.reply(f"You got ${gain}.")
 
-    @commands.command()
+    @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
-    async def rob(self, ctx, member: discord.Member):
+    @commands.cooldown(rate = 1, per = 2 * 60 * 60, type = commands.BucketType.user)
+    async def rob(self, ctx, *, member: discord.Member):
         if str(ctx.author.id) not in db["Currency"]:
             db["Currency"][str(ctx.author.id)] = [0, 0]
+        if member == ctx.author or member.bot:
+            return await ctx.reply("No")
         if str(member.id) not in db["Currency"]:
             db["Currency"][str(member.id)] = [0, 0]
         if db["Currency"][str(ctx.author.id)][0] >= 500:
             if db["Currency"][str(member.id)][0] >= 500:
                 if random.randint(0, 100) < 50:
-                    amount = random.randint(500, db["Currency"][str(member.id)][0])
+                    amount = random.randint(500, max(db["Currency"][str(member.id)][0] // 3, 500))
                     db["Currency"][str(ctx.author.id)][0] += amount
                     db["Currency"][str(member.id)][0] -= amount
-                    await ctx.reply(f"You robbed ${amount} from `{member}`.")
+                    await ctx.reply(f"You stole ${amount} from `{member}`.")
                 else:
-                    amount = random.randint(500, db["Currency"][str(ctx.author.id)][0] // 5)
+                    amount = random.randint(500, max(db["Currency"][str(ctx.author.id)][0] // 3, 500))
                     db["Currency"][str(ctx.author.id)][0] -= amount
                     await ctx.reply(f"You got caught and lost ${amount}.")
             else:
@@ -140,6 +152,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
                     else:
                         await interaction.followup.send(f"You are ${db['Shop'][str(ctx.guild.id)][view.children[0].values[0]] - db['Currency'][str(interaction.user.id)][0]} short.", ephemeral = True)
                 except asyncio.TimeoutError:
+                    await message.edit(view = None)
                     menu.disable = True
                     view.stop()
                     break

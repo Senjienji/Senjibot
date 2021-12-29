@@ -4,7 +4,7 @@ from webserver import keep_alive
 from replit import db
 import random
 import time
-import os
+import os 
 
 class MinimalHelpCommand(commands.MinimalHelpCommand):
     async def send_pages(self):
@@ -40,9 +40,9 @@ bot = commands.Bot(
     )
 )
 
-for file in os.listdir("./cogs"):
-    if file.endswith(".py"):
-        bot.load_extension(f"cogs.{file[:-3]}")
+for extension in os.listdir("./cogs"):
+    if extension.endswith(".py"):
+        bot.load_extension(f"cogs.{extension[:-3]}")
 
 @bot.check
 async def is_enabled(ctx):
@@ -56,7 +56,7 @@ async def is_enabled(ctx):
 
 @bot.before_invoke
 async def before_invoke(ctx):
-    if random.randint(0, 100) < 10 and ctx.command.name != "purge":
+    if random(0, 100) < 10 and ctx.command.name != "purge":
         await ctx.reply("""
 **WARNING**
 This bot will be replaced in <t:1640995200:D>,
@@ -66,12 +66,12 @@ Please re-invite me: <https://Senjibot.senjienji.repl.co/invite>
 
 @bot.event
 async def on_connect():
-    bot.launch_time = time.time()
+    bot.launch_time = time()
     print("Connected")
 
 @bot.event
 async def on_ready():
-    bot.launch_time = time.time()
+    bot.launch_time = time()
     print("Ready")
     await bot.get_user(bot.owner_id).send(f"Online since <t:{int(bot.launch_time)}:d> <t:{int(bot.launch_time)}:T>")
 
@@ -80,7 +80,7 @@ async def on_command_error(ctx, error):
     print(f"{str(type(error))[8:-2]}: {error}")
     content = str(error)
     if isinstance(error, commands.CommandOnCooldown):
-        content = f"You are on cooldown. Try again <t:{int(timestamp() + error.retry_after)}:R>"
+        content = f"You are on cooldown. Try again <t:{int(time() + error.retry_after)}:R>"
     elif isinstance(error, commands.MissingRequiredArgument):
         return await ctx.send_help(ctx.command)
     elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)) or str(error) == f"The global check functions for command {ctx.command.name} failed.":
@@ -93,7 +93,7 @@ async def on_command_error(ctx, error):
         try:
             await ctx.author.send(f"> {ctx.channel.mention}: {ctx.message.content}\n{content}")
         except discord.Forbidden:
-            return
+            pass
 
 @bot.event
 async def on_guild_join(guild):
@@ -103,31 +103,31 @@ async def on_guild_join(guild):
 async def on_guild_remove(guild):
     await bot.get_user(bot.owner_id).send(f"Removed from `{guild.name}`.")
 
-@bot.command()
+@bot.command(hidden = True)
 @commands.is_owner()
-async def load(ctx, file):
-    bot.load_extension(f"cogs.{file}")
-    await ctx.reply(f"`{file}` loaded.")
-
-@bot.command()
-@commands.is_owner()
-async def reload(ctx, file):
-    bot.reload_extension(f"cogs.{file}")
-    await ctx.reply(f"`{file}` reloaded.")
-
-@bot.command()
-@commands.is_owner()
-async def unload(ctx, file):
-    bot.unload_extension(f"cogs.{file}")
-    await ctx.reply(f"`{file}` unloaded.")
+async def load(ctx, extension):
+    bot.load_extension(f"cogs.{extension}")
+    await ctx.reply(f"`{extension}` loaded.")
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def doc(ctx, *, search = None):
-    if search == None:
+async def reload(ctx, extension):
+    bot.reload_extension(f"cogs.{extension}")
+    await ctx.reply(f"`{extension}` reloaded.")
+
+@bot.command(hidden = True)
+@commands.is_owner()
+async def unload(ctx, extension):
+    bot.unload_extension(f"cogs.{extension}")
+    await ctx.reply(f"`{extension}` unloaded.")
+
+@bot.command(hidden = True)
+@commands.is_owner()
+async def doc(ctx, *, query = None):
+    if query == None:
         await ctx.reply("https://discordpy.readthedocs.io/en/master/api.html")
     else:
-        await ctx.reply(f"https://discordpy.readthedocs.io/en/master/search.html?q={search.replace(' ', '+')}")
+        await ctx.reply(f"https://discordpy.readthedocs.io/en/master/search.html?q={query.replace(' ', '+')}")
 
 @bot.command(name = "exec", hidden = True)
 @commands.is_owner()

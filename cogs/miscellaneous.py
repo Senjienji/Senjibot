@@ -4,9 +4,8 @@ from replit import db
 import asyncio
 import random
 import time
-import json
 
-class Miscellanous(commands.Cog):
+class Miscellaneous(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         bot.help_command.cog = self
@@ -19,11 +18,10 @@ class Miscellanous(commands.Cog):
                 "ctx": ctx,
                 "bot": self.bot,
                 "discord": discord,
-                "choose": random.choice,
                 "timestamp": time.time,
+                "choose": random.choice,
                 "shuffle": lambda x: random.sample(x, len(x)),
-                "db": json.loads(db.dumps(dict(db))),
-                "replied": (ctx.message.reference.resolved if ctx.message.reference != None else None)
+                "db": __import__("json").loads(db.dumps(dict(db))),
             }, {
                 "__import__": None,
                 "copyright": None,
@@ -42,10 +40,6 @@ class Miscellanous(commands.Cog):
             text = ctx.author.display_name,
             icon_url = ctx.author.avatar
         ))
-    
-    @commands.command(aliases = ["chr"])
-    async def character(self, ctx, *, content):
-        await ctx.reply(sum(ord(i) for i in content) / len(content))
     
     @commands.command()
     async def math(self, ctx):
@@ -73,7 +67,7 @@ class Miscellanous(commands.Cog):
     @commands.command()
     async def rps(self, ctx, member: discord.Member = None):
         if member == None:
-            member = self.bot.user
+            member = ctx.me
         if member == ctx.author:
             return await ctx.reply("No")
         view = discord.ui.View(timeout = 60)
@@ -97,7 +91,7 @@ class Miscellanous(commands.Cog):
             else:
                 await message.edit(content = f"{member.mention} Select a move:")
                 try:
-                    interaction = await bot.wait_for("interaction", check = lambda interaction: interaction.message == message and interaction.user == member, timeout = 60)
+                    interaction = await self.bot.wait_for("interaction", check = lambda interaction: interaction.message == message and interaction.user == member, timeout = 60)
                     p2 = moves.index(view.children[0].values[0])
                 except asyncio.TimeoutError:
                     await message.edit(content = f"{member.mention} You didn't select in time.", view = None)
@@ -126,7 +120,7 @@ class Miscellanous(commands.Cog):
         ))
     
     @commands.command()
-    async def embed(self, ctx, title, description):
+    async def embed(self, ctx, title, *, description):
         embed = discord.Embed(
             title = title,
             description = description,
@@ -180,4 +174,4 @@ Version: {discord.__version__}
             await message.add_reaction("1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i])
 
 def setup(bot):
-    bot.add_cog(Miscellanous(bot))
+    bot.add_cog(Miscellaneous(bot))
