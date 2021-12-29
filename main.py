@@ -80,7 +80,7 @@ async def on_command_error(ctx, error):
     print(f"{str(type(error))[8:-2]}: {error}")
     content = str(error)
     if isinstance(error, commands.CommandOnCooldown):
-        content = f"You are on cooldown. Try again <t:{int(time() + error.retry_after)}:R>"
+        content = f"You are on cooldown. Try again <t:{int(time.time() + error.retry_after)}:R>"
     elif isinstance(error, commands.MissingRequiredArgument):
         return await ctx.send_help(ctx.command)
     elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)) or str(error) == f"The global check functions for command {ctx.command.name} failed.":
