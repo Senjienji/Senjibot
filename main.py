@@ -56,7 +56,7 @@ async def is_enabled(ctx):
 
 @bot.before_invoke
 async def before_invoke(ctx):
-    if random(0, 100) < 10 and ctx.command.name != "purge":
+    if random.randint(0, 100) < 10 and ctx.command.name != "purge":
         await ctx.reply("""
 **WARNING**
 This bot will be replaced in <t:1640995200:D>,
@@ -66,12 +66,12 @@ Please re-invite me: <https://Senjibot.senjienji.repl.co/invite>
 
 @bot.event
 async def on_connect():
-    bot.launch_time = time()
+    bot.launch_time = time.time()
     print("Connected")
 
 @bot.event
 async def on_ready():
-    bot.launch_time = time()
+    bot.launch_time = time.time()
     print("Ready")
     await bot.get_user(bot.owner_id).send(f"Online since <t:{int(bot.launch_time)}:d> <t:{int(bot.launch_time)}:T>")
 
