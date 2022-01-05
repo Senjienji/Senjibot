@@ -3,14 +3,11 @@ from discord.ext import commands
 from replit import db
 
 if "Prefix" not in db:
-    db["Prefix"] = {}
+    db["Prefix"] = {} #{"guild.id": "prefix"}
 if "Enabled" not in db:
-    db["Enabled"] = {}
+    db["Enabled"] = {} #{"guild.id": {"command": enabled}}
 
 class Moderation(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-    
     @commands.command()
     @commands.has_guild_permissions(kick_members = True)
     @commands.bot_has_guild_permissions(kick_members = True)
@@ -30,22 +27,22 @@ class Moderation(commands.Cog):
     @commands.bot_has_guild_permissions(ban_members = True)
     async def unban(self, ctx, *, user: discord.User):
         await ctx.guild.unban(user)
-        await reply(f"`{user}` unbanned.")
+        await ctx.reply(f"`{user}` unbanned.")
     
     @commands.command()
     async def prefix(self, ctx, prefix = None):
         if prefix == None:
-            await ctx.reply(f"My current prefix is `{self.client.command_prefix(self.client, ctx.message)}`.")
+            await ctx.reply(f"My current prefix is `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.")
         elif ctx.author.guild_permissions.manage_guild:
             db["Prefix"][str(ctx.guild.id)] = prefix
-            await ctx.reply(f"Prefix has been changed to `{self.client.command_prefix(self.client, ctx.message)}`.")
+            await ctx.reply(f"Prefix has been changed to `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.")
         else:
             raise commands.MissingPermissions(["manage_guild"])
     
     @commands.command()
     @commands.has_guild_permissions(manage_guild = True)
     async def enable(self, ctx, command):
-        if command.lower() in (command.name for command in self.bot.commands):
+        if command.lower() in (command.name for command in ctx.bot.commands):
             if command.lower() in ("enable", "disable", "help"):
                 await ctx.reply("Cannot enable this command.")
             else:
@@ -57,7 +54,7 @@ class Moderation(commands.Cog):
     @commands.command()
     @commands.has_guild_permissions(manage_guild = True)
     async def disable(self, ctx, command):
-        if command.lower() in (command.name for command in self.bot.commands):
+        if command.lower() in (command.name for command in ctx.bot.commands):
             if command.lower() not in ("enable", "disable", "help"):
                 db["Enabled"][str(ctx.guild.id)][command.lower()] = False
                 await ctx.reply(f'Command "{command.lower()}" disabled.')
@@ -75,4 +72,4 @@ class Moderation(commands.Cog):
         await ctx.send(f"Purged {len(purge)} message{'s' if len(purge) != 1 else str()}.", delete_after = 3)
 
 def setup(bot):
-    bot.add_cog(Moderation(bot))
+    bot.add_cog(Moderation())

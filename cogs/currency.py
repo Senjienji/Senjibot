@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from replit import db
-import asyncio
 import random
 
 if "Currency" not in db:
@@ -10,9 +9,6 @@ if "Shop" not in db:
     db["Shop"] = {} #{"guild.id": {"name": price}}
 
 class Currency(commands.Cog):
-    def __init__(self, bot):
-        self.bot = bot
-
     @commands.command(aliases = ["bal"])
     async def balance(self, ctx, *, member: discord.Member = None):
         if member == None:
@@ -30,19 +26,52 @@ Bank: ${db['Currency'][str(member.id)][1]}
             color = 0xffe5ce
         ).set_footer(
             text = ctx.author.display_name,
-            icon_url = ctx.author.avatar
+            icon_url = ctx.author.display_avatar.url
         ))
 
     @commands.command(aliases = ["lb"])
     async def leaderboard(self, ctx):
-        await ctx.reply(embed = discord.Embed(
+        paginator = tuple(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, ((ctx.guild.get_member(int(i[0])), i[1][0]) for i in db["Currency"].items())), key = lambda i: i[1], reverse = True), start = 1))
+        page = 0
+        view = discord.ui.View(timeout = 60)
+        view.add_item(discord.ui.Button(
+            label = "Previous",
+            emoji = "⬅️",
+            custom_id = "-10"
+        ))
+        view.add_item(discord.ui.Button(
+            label = "Next",
+            emoji = "➡️",
+            custom_id = "10"
+        ))
+        message = await ctx.reply(embed = discord.Embed(
             title = "Leaderboard",
-            description = "\n".join(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, ((ctx.guild.get_member(int(i[0])), i[1][0]) for i in db["Currency"].items())), key = lambda i: i[1], reverse = True), start = 1)),
+            description = "\n".join(paginator[page:page + 10]),
             color = 0xffe5ce
         ).set_footer(
             text = ctx.author.display_name,
-            icon_url = ctx.author.avatar
-        ))
+            icon_url = ctx.author.display_avatar.url
+        ), view = view)
+        while True:
+            try:
+                interaction = await ctx.bot.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+                if interaction.user == ctx.author:
+                    page += int(interaction.data["custom_id"])
+                    page = min(max(page, 0), len(paginator) // 10 * 10)
+                    await message.edit(embed = discord.Embed(
+                        title = "Leaderboard",
+                        description = "\n".join(paginator[page:page + 10]),
+                        color = 0xffe5ce
+                    ).set_footer(
+                        text = ctx.author.display_name,
+                        icon_url = ctx.author.display_avatar.url
+                    ))
+                else:
+                    await interaction.followup.send("This button is not for you.", ephemeral = True)
+            except discord.utils.asyncio.TimeoutError:
+                await message.edit(view = None)
+                view.stop()
+                break
     
     @commands.command(aliases = ["dep"])
     async def deposit(self, ctx, amount):
@@ -88,6 +117,28 @@ Bank: ${db['Currency'][str(member.id)][1]}
         gain = random.randint(1000, 2500)
         db["Currency"][str(ctx.author.id)][0] += gain
         await ctx.reply(f"You got ${gain}.")
+    
+    @commands.command(cooldown_after_parsing = True)
+    @commands.guild_only()
+    @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
+    async def give(self, ctx, member: discord.Member, amount: int):
+        if str(ctx.author.id) not in db["Currency"]:
+            db["Currency"][str(ctx.author.id)] = [0, 0]
+        if member == ctx.author or member.bot:
+            await ctx.reply("No")
+            return give.reset_cooldown(ctx)
+        if str(member.id) not in db["Currency"]:
+            db["Currency"][str(member.id)] = [0, 0]
+        if amount > 0:
+            if db["Currency"][str(ctx.author.id)][0] >= amount:
+                db["Currency"][str(ctx.author.id)][0] -= amount
+                db["Currency"][str(member.id)][0] += amount
+                await ctx.reply(f"You gave ${amount} to `{member}`.")
+            else:
+                await ctx.reply(f"You're ${amount - db['Currency'][str(ctx.author.id)][0]} short.")
+                give.reset_cooldown(ctx)
+        else:
+            await ctx.reply("amount must be greater than 0.")
 
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
@@ -96,7 +147,8 @@ Bank: ${db['Currency'][str(member.id)][1]}
         if str(ctx.author.id) not in db["Currency"]:
             db["Currency"][str(ctx.author.id)] = [0, 0]
         if member == ctx.author or member.bot:
-            return await ctx.reply("No")
+            await ctx.reply("No")
+            return rob.reset_cooldown(ctx)
         if str(member.id) not in db["Currency"]:
             db["Currency"][str(member.id)] = [0, 0]
         if db["Currency"][str(ctx.author.id)][0] >= 500:
@@ -112,8 +164,10 @@ Bank: ${db['Currency'][str(member.id)][1]}
                     await ctx.reply(f"You got caught and lost ${amount}.")
             else:
                 await ctx.reply("Your target has less than $500.")
+                rob.reset_cooldown(ctx)
         else:
-            await ctx.reply("You need at least $500 to rob someone.")    
+            await ctx.reply("You need at least $500 to rob someone.")
+            rob.reset_cooldown(ctx)
     
     @commands.command(hidden = True)
     @commands.is_owner()
@@ -143,7 +197,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
             message = await ctx.reply("Shop", view = view)
             while True:
                 try:
-                    interaction = await self.bot.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 1 * 60 * 60)
+                    interaction = await ctx.bot.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 1 * 60 * 60)
                     if str(interaction.user.id) not in db["Currency"]:
                         db["Currency"][str(interaction.user.id)] = [0, 0]
                     if db["Currency"][str(interaction.user.id)][0] >= db["Shop"][str(ctx.guild.id)][view.children[0].values[0]]:
@@ -151,7 +205,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
                         await interaction.followup.send(f'{interaction.user.mention} item "{view.children[0].values[0]}" purchased.')
                     else:
                         await interaction.followup.send(f"You are ${db['Shop'][str(ctx.guild.id)][view.children[0].values[0]] - db['Currency'][str(interaction.user.id)][0]} short.", ephemeral = True)
-                except asyncio.TimeoutError:
+                except discord.utils.asyncio.TimeoutError:
                     await message.edit(view = None)
                     menu.disable = True
                     view.stop()
@@ -193,4 +247,4 @@ Bank: ${db['Currency'][str(member.id)][1]}
             await ctx.reply(f'Item "{name}" not found.')
 
 def setup(bot):
-    bot.add_cog(Currency(bot))
+    bot.add_cog(Currency())

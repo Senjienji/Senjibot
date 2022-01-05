@@ -6,6 +6,9 @@ import random
 import time
 import os 
 
+if "Prefix" not in db:
+    db["Prefix"] = {} #{"guild.id": "prefix"}
+
 class MinimalHelpCommand(commands.MinimalHelpCommand):
     async def send_pages(self):
         await self.context.reply(embed = discord.Embed(
@@ -49,38 +52,32 @@ async def is_enabled(ctx):
     if ctx.guild == None:
         return True
     if str(ctx.guild.id) not in db["Enabled"]:
-        db["Enabled"][str(ctx.guild.id)] = {command.name: True for command in client.commands}
+        db["Enabled"][str(ctx.guild.id)] = {command.name: True for command in bot.commands}
     if ctx.command.name not in db["Enabled"][str(ctx.guild.id)]:
         db["Enabled"][str(ctx.guild.id)][ctx.command.name] = True
     return db["Enabled"][str(ctx.guild.id)][ctx.command.name]
 
 @bot.before_invoke
 async def before_invoke(ctx):
-    if random.randint(0, 100) < 10 and ctx.command.name != "purge":
-        await ctx.reply("""
-**WARNING**
-This bot will be replaced in <t:1640995200:D>,
-Please re-invite me: <https://Senjibot.senjienji.repl.co/invite>
-        """)
+    await bot.wait_until_ready()
     await ctx.trigger_typing()
 
 @bot.event
 async def on_connect():
-    bot.launch_time = time.time()
     print("Connected")
 
 @bot.event
 async def on_ready():
-    bot.launch_time = time.time()
+    bot.launch_time = __import__("datetime").datetime.today()
     print("Ready")
-    await bot.get_user(bot.owner_id).send(f"Online since <t:{int(bot.launch_time)}:d> <t:{int(bot.launch_time)}:T>")
+    await bot.get_user(bot.owner_id).send(f"Online since {discord.utils.format_dt(bot.launch_time, 'd')} {discord.utils.format_dt(bot.launch_time, 'T')}")
 
 @bot.event
 async def on_command_error(ctx, error):
     print(f"{str(type(error))[8:-2]}: {error}")
     content = str(error)
     if isinstance(error, commands.CommandOnCooldown):
-        content = f"You are on cooldown. Try again <t:{int(time.time() + error.retry_after)}:R>"
+        content = f"You are on cooldown. Try again {discord.utils.format_dt(__import__('datetime').datetime.fromtimestamp(time.time() + error.retry_after), 'R')}"
     elif isinstance(error, commands.MissingRequiredArgument):
         return await ctx.send_help(ctx.command)
     elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)) or str(error) == f"The global check functions for command {ctx.command.name} failed.":
