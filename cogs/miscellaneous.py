@@ -111,6 +111,7 @@ class Miscellaneous(commands.Cog):
                         content = "It's a tie!"
                     content += f"\n\n`{ctx.author.display_name}`: {moves[p1]}\n`{member.display_name}`: {moves[p2]}"
                     await message.edit(content = content, view = None)
+                    break
                 else:
                     continue
             except discord.utils.asyncio.TimeoutError:
