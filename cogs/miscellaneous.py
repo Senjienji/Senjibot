@@ -17,6 +17,7 @@ class Miscellaneous(commands.Cog):
                 "discord": discord,
                 "timestamp": time.time,
                 "choose": random.choice,
+                "math": __import__("math"),
                 "shuffle": lambda x: random.sample(x, len(x)),
                 "db": discord.utils.json.loads(db.dumps(dict(db))),
             }, {
@@ -61,6 +62,65 @@ class Miscellaneous(commands.Cog):
         except discord.utils.asyncio.TimeoutError:
             await reply.edit(content = f"{equation} = {eval(equation)}\nYou didn't reply in time.")
     
+    @commands.command(description = "Tic Tac Toe", hidden = True)
+    async def ttt(self, ctx):
+        board = (
+            [None, None, None],
+            [None, None, None],
+            [None, None, None]
+        )
+        attempt = 1
+        view = discord.ui.View(timeout = 60)
+        for y in range(len(board)):
+            for x in range(len(board[y])):
+                view.add_item(discord.ui.Button(
+                    label = " ",
+                    custom_id = str(x + y * len(board[y])),
+                    row = y
+                ))
+        message = await ctx.reply("Select a box", view = view)
+        while True:
+            try:
+                interaction = await ctx.bot.wait_for("interaction", check = lambda interaction: interaction.message == message and board[int(interaction.data["custom_id"]) // len(board)][int(interaction.data["custom_id"]) % len(board)] == None, timeout = 60)
+                board[int(interaction.data["custom_id"]) // len(board)][int(interaction.data["custom_id"]) % len(board)] = "❌" if attempt % 2 else "⭕"
+                view.clear_items()
+                for y in range(len(board)):
+                    for x in range(len(board[y])):
+                        view.add_item(discord.ui.Button(
+                            label = str() if board[y][x] else " ",
+                            emoji = board[y][x],
+                            custom_id = str(x + y * len(board[y])),
+                            row = y
+                        ))
+                await message.edit(view = view)
+                attempt += 1
+            except discord.utils.asyncio.TimeoutError:
+                view.stop()
+                break
+    
+    @commands.command()
+    async def menu(self, ctx):
+        view = discord.ui.View(timeout = 60)
+        view.add_item(discord.ui.Select(options = [discord.SelectOption(
+            label = "Option 1",
+            emoji = "1️⃣"
+        ), discord.SelectOption(
+            label = "Option 2",
+            emoji = "2️⃣"
+        ), discord.SelectOption(
+            label = "Option 3",
+            emoji = "3️⃣"
+        )]))
+        message = await ctx.reply("Menu", view = view)
+        while True:
+            try:
+                interaction = await ctx.bot.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
+                await interaction.followup.send(interaction.data, ephemeral = True)
+            except discord.utils.asyncio.TimeoutError:
+                await message.edit(view = None)
+                view.stop()
+                break
+    
     @commands.command()
     async def rps(self, ctx, member: discord.Member = None):
         if member == None:
@@ -72,11 +132,13 @@ class Miscellaneous(commands.Cog):
             label = "Rock",
             emoji = "🪨",
             custom_id = "Rock"
-        )); view.add_item(discord.ui.Button(
+        ))
+        view.add_item(discord.ui.Button(
             label = "Paper",
             emoji = "📄",
             custom_id = "Paper"
-        )); view.add_item(discord.ui.Button(
+        ))
+        view.add_item(discord.ui.Button(
             label = "Scissors",
             emoji = "✂️",
             custom_id = "Scissors"

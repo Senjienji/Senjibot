@@ -30,10 +30,11 @@ def get_prefix(bot, message):
 bot = commands.Bot(
     command_prefix = get_prefix,
     activity = discord.Game("Python"),
-    help_command = MinimalHelpCommand(verify_checks = False),
     owner_id = 902371374033670224,
+    help_command = MinimalHelpCommand(verify_checks = False),
     allowed_mentions = discord.AllowedMentions(
         everyone = False,
+        roles = False,
         replied_user = False
     ),
     intents = discord.Intents(
@@ -102,21 +103,40 @@ async def on_guild_remove(guild):
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def load(ctx, extension):
-    bot.load_extension(f"cogs.{extension}")
-    await ctx.reply(f"`{extension}` loaded.")
+async def load(ctx, extension = None):
+    if extension == None:
+        for extension in os.listdir("./cogs"):
+            if extension.endwith("py"):
+                bot.load_extension(f"cogs.{extension[:-3]}")
+        await ctx.reply(f"`{' '.join(bot.extensions.keys())}` loaded")
+    else:
+        bot.load_extension(f"cogs.{extension}")
+        await ctx.reply(f"`cogs.{extension}` loaded.")
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def reload(ctx, extension):
-    bot.reload_extension(f"cogs.{extension}")
-    await ctx.reply(f"`{extension}` reloaded.")
+async def reload(ctx, extension = None):
+    if extension == None:
+        for extension in os.listdir("./cogs"):
+            if extension.endswith(".py"):
+                bot.reload_extension(f"cogs.{extension[:-3]}")
+        await ctx.reply(f"`{' '.join(bot.extensions.keys())}` reloaded.")
+    else:
+        bot.reload_extension(f"cogs.{extension}")
+        await ctx.reply(f"`{extension}` reloaded.")
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def unload(ctx, extension):
-    bot.unload_extension(f"cogs.{extension}")
-    await ctx.reply(f"`{extension}` unloaded.")
+async def unload(ctx, extension = None):
+    if extension == None:
+        for extension in os.listdir("./cogs"):
+            if extension.endswith(".py"):
+                bot.unload_extension(f"cogs.{extension[:-3]}")
+        await ctx.reply(f"`{' '.join(filter(lambda extension: extension.endswith('py'), os.listdir('./cogs')))}` unloaded.")
+    else:
+        bot.reload_untension(f"cogs.{extension}")
+        await ctx.reply(f"`{extension}` unloaded.")
+
 
 @bot.command(hidden = True)
 @commands.is_owner()

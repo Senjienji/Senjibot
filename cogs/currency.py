@@ -31,7 +31,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
 
     @commands.command(aliases = ["lb"])
     async def leaderboard(self, ctx):
-        paginator = tuple(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, ((ctx.guild.get_member(int(i[0])), i[1][0]) for i in db["Currency"].items())), key = lambda i: i[1], reverse = True), start = 1))
+        paginator = tuple(f"{index}. `{member}`: ${amount}" for index, (member, amount) in enumerate(sorted(filter(lambda i: i[0] != None and i[1] > 0, ((ctx.guild.get_member(int(i[0])), sum(i[1])) for i in db["Currency"].items())), key = lambda i: i[1], reverse = True), start = 1))
         page = 0
         view = discord.ui.View(timeout = 60)
         view.add_item(discord.ui.Button(
@@ -57,7 +57,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
                 interaction = await ctx.bot.wait_for("interaction", check = lambda interaction: interaction.message == message, timeout = 60)
                 if interaction.user == ctx.author:
                     page += int(interaction.data["custom_id"])
-                    page = min(max(page, 0), len(paginator) // 10 * 10)
+                    page = min(max(page, 0), (len(paginator) - 1) // 10 * 10)
                     await message.edit(embed = discord.Embed(
                         title = "Leaderboard",
                         description = "\n".join(paginator[page:page + 10]),
@@ -126,7 +126,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
             db["Currency"][str(ctx.author.id)] = [0, 0]
         if member == ctx.author or member.bot:
             await ctx.reply("No")
-            return give.reset_cooldown(ctx)
+            return ctx.command.reset_cooldown(ctx)
         if str(member.id) not in db["Currency"]:
             db["Currency"][str(member.id)] = [0, 0]
         if amount > 0:
@@ -136,9 +136,10 @@ Bank: ${db['Currency'][str(member.id)][1]}
                 await ctx.reply(f"You gave ${amount} to `{member}`.")
             else:
                 await ctx.reply(f"You're ${amount - db['Currency'][str(ctx.author.id)][0]} short.")
-                give.reset_cooldown(ctx)
+                ctx.command.reset_cooldown(ctx)
         else:
             await ctx.reply("amount must be greater than 0.")
+            ctx.command.reset_cooldown(ctx)
 
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
@@ -148,7 +149,7 @@ Bank: ${db['Currency'][str(member.id)][1]}
             db["Currency"][str(ctx.author.id)] = [0, 0]
         if member == ctx.author or member.bot:
             await ctx.reply("No")
-            return rob.reset_cooldown(ctx)
+            return ctx.command.reset_cooldown(ctx)
         if str(member.id) not in db["Currency"]:
             db["Currency"][str(member.id)] = [0, 0]
         if db["Currency"][str(ctx.author.id)][0] >= 500:
@@ -164,10 +165,10 @@ Bank: ${db['Currency'][str(member.id)][1]}
                     await ctx.reply(f"You got caught and lost ${amount}.")
             else:
                 await ctx.reply("Your target has less than $500.")
-                rob.reset_cooldown(ctx)
+                ctx.command.reset_cooldown(ctx)
         else:
             await ctx.reply("You need at least $500 to rob someone.")
-            rob.reset_cooldown(ctx)
+            ctx.command.reset_cooldown(ctx)
     
     @commands.command(hidden = True)
     @commands.is_owner()
