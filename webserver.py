@@ -4,9 +4,9 @@ import discord
 
 app = Flask(__name__)
 
-@app.route("/")
+@app.route('/')
 def home():
-    return """
+    return '''
 <!doctype html>
 <html>
     <head>
@@ -24,9 +24,9 @@ def home():
         <a href="https://Senjibot.senjienji.repl.co/invite"> Invite me! </a>
     </body>
 </html>
-    """
+    '''
 
-@app.route("/invite")
+@app.route('/invite')
 def invite():
     return redirect(discord.utils.oauth_url(922077126579060788, permissions = discord.Permissions(
         manage_roles = True,
@@ -42,5 +42,5 @@ def invite():
     )))
 
 def keep_alive():
-    t = Thread(target = lambda: app.run(host = "0.0.0.0", port = 8080))
+    t = Thread(target = lambda: app.run(host = '0.0.0.0', port = 8080))
     t.start()
