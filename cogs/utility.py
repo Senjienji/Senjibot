@@ -4,8 +4,6 @@ import pymongo
 import random
 import time
 
-client = pymongo.MongoClient()
-print(client.list_databases())
 '''
 options = ('Trigger',)
 for setting in options:
@@ -24,8 +22,7 @@ class Utility(commands.Cog):
                 'choose': random.choice,
                 'random': random.randint,
                 'timestamp': __import__('time').time,
-                'shuffle': lambda x: random.sample(x, len(x)),
-                'client': client
+                'shuffle': lambda x: random.sample(x, len(x))
             }, {i: None for i in (
                 '__import__',
                 'copyright',
