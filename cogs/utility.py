@@ -5,7 +5,7 @@ import random
 import time
 
 client = pymongo.MongoClient()
-
+print(client.list_databases())
 '''
 options = ('Trigger',)
 for setting in options:
