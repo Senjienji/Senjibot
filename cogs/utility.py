@@ -1,6 +1,5 @@
 import discord
 from discord.ext import commands
-import pymongo
 import random
 import time
 
