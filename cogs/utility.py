@@ -1,8 +1,10 @@
 import discord
 from discord.ext import commands
-#from replit import db
+import pymongo
 import random
 import time
+
+client = pymongo.MongoClient()
 
 '''
 options = ('Trigger',)
@@ -23,6 +25,7 @@ class Utility(commands.Cog):
                 'random': random.randint,
                 'timestamp': __import__('time').time,
                 'shuffle': lambda x: random.sample(x, len(x)),
+                'client': client
             }, {i: None for i in (
                 '__import__',
                 'copyright',
