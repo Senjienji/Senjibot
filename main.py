@@ -30,7 +30,7 @@ def get_prefix(bot, message):
         prefix_cl.insert_one({
             'guild': message.guild.id,
             'prefix': 's!'
-        }
+        })
     return prefix_cl.find_one({'guild': message.guild.id})['prefix']
 
 bot = commands.Bot(
