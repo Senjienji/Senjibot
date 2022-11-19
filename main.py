@@ -4,10 +4,13 @@ import random
 import time
 import os
 
-'''
-if 'Prefix' not in db:
-    db['Prefix'] = {}  #{'guild.id': 'prefix'}
-'''
+client = pymongo.MongoClient(
+    f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
+    server_api = pymongo.server_api.ServerApi('1'),
+)
+db = client.db
+prefix_cl = db.prefix
+enabled_cl = db.enabled
 
 class MinimalHelpCommand(commands.MinimalHelpCommand):
     async def send_pages(self):
@@ -20,42 +23,49 @@ class MinimalHelpCommand(commands.MinimalHelpCommand):
             icon_url = self.context.author.display_avatar.url
         ))
 
-'''
 def get_prefix(bot, message):
     if message.guild == None:
         return 's!'
-    if str(message.guild.id) not in db['Prefix']:
-        db['Prefix'][str(message.guild.id)] = 's!'
-    return db['Prefix'][str(message.guild.id)]
-'''
+    if prefix_cl.find_one({'guild': message.guild.id}) == None: 
+        prefix_cl.insert_one({
+            'guild': message.guild.id,
+            'prefix': 's!'
+        }
+    return prefix_cl.find_one({'guild': message.guild.id})['prefix']
 
 bot = commands.Bot(
-    command_prefix = 's!', #get_prefix
+    command_prefix = get_prefix,
     activity = discord.Game('Python'),
     owner_id = 902371374033670224,
-    help_command = MinimalHelpCommand(verify_checks=False),
+    help_command = MinimalHelpCommand(verify_checks = False),
     allowed_mentions = discord.AllowedMentions(
         everyone = False,
         roles = False,
         replied_user = False
-    ), intents = discord.Intents.all(
-        #guilds = True,
-        #members = True,
-        #messages = True
-    ))
+    ), intents = discord.Intents(
+        guilds = True,
+        members = True,
+        messages = True,
+        message_content = True
+    )
+)
 
-'''
 @bot.check
 async def is_enabled(ctx):
     if ctx.guild == None:
         return True
-    if str(ctx.guild.id) not in db['Enabled']:
-        db['Enabled'][str(ctx.guild.id)] = {command.name: True for command in bot.commands}
-        db['Enabled'][str(ctx.guild.id)]['snipe'] = False
-    if ctx.command.name not in db['Enabled'][str(ctx.guild.id)]:
-        db['Enabled'][str(ctx.guild.id)][ctx.command.name] = True
-    return db['Enabled'][str(ctx.guild.id)][ctx.command.name]
-'''
+    if enabled_cl.find_one({'guild': ctx.guild.id}) == None:
+        enabled = {command.name: True for command in bot.commands}
+        enabled['snipe'] = False
+        enabled['guild'] = ctx.guild.id
+        enabled_cl.insert_one(enabled)
+    if ctx.command.name not in enabled_cl.find_one({'guild': ctx.guild.id}):
+        enabled_cl.find_one_and_update(
+            {'guild': ctx.guild.id},
+            {'$set': {ctx.command.name: True}},
+            upsert = True
+        )
+    return enabled_cl.find_one({'guild': ctx.guild.id})[ctx.command.name]
 
 @bot.before_invoke
 async def before_invoke(ctx):
