@@ -28,5 +28,5 @@ def invite():
     )))
 
 def host():
-    t = Thread(target = lambda: app.run(host = "0.0.0.0", port = 8080))
+    t = Thread(target = lambda: app.run(host = "0.0.0.0", port = 5000))
     t.start()
