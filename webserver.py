@@ -27,6 +27,6 @@ def invite():
         embed_links = True
     )))
 
-def keep_alive():
+def host():
     t = threading.Thread(target = lambda: app.run(host = "0.0.0.0", port = 8080))
     t.start()
