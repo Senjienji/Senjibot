@@ -136,7 +136,7 @@ class Currency(commands.Cog):
         if amount > 0:
             if bank >= amount:
                 currency_cl.find_one_and_update(
-                    {'user': ctx.author.id}
+                    {'user': ctx.author.id},
                     {'$inc': {
                         'wallet': amount,
                         'bank': -amount
