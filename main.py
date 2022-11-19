@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from webserver import host
 import pymongo
 import random
 import time
@@ -159,4 +160,5 @@ async def execute(ctx, *, content):
 async def leave(ctx, *, guild: discord.Guild):
     await guild.leave()
 
+host()
 bot.run(os.environ["DISCORD_TOKEN"])
