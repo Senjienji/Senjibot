@@ -11,7 +11,6 @@ client = pymongo.MongoClient(
 )
 db = client.db
 prefix_cl = db.prefix
-enabled_cl = db.enabled
 
 class MinimalHelpCommand(commands.MinimalHelpCommand):
     async def send_pages(self):
@@ -51,23 +50,6 @@ bot = commands.Bot(
     )
 )
 
-@bot.check
-async def is_enabled(ctx):
-    if ctx.guild == None:
-        return True
-    if enabled_cl.find_one({'guild': ctx.guild.id}) == None:
-        enabled = {command.name: True for command in bot.commands}
-        enabled['snipe'] = False
-        enabled['guild'] = ctx.guild.id
-        enabled_cl.insert_one(enabled)
-    if ctx.command.name not in enabled_cl.find_one({'guild': ctx.guild.id}):
-        enabled_cl.find_one_and_update(
-            {'guild': ctx.guild.id},
-            {'$set': {ctx.command.name: True}},
-            upsert = True
-        )
-    return enabled_cl.find_one({'guild': ctx.guild.id})[ctx.command.name]
-
 @bot.before_invoke
 async def before_invoke(ctx):
     await bot.wait_until_ready()
@@ -94,17 +76,14 @@ async def on_command_error(ctx, error):
         content = f'You are on cooldown. Try again {discord.utils.format_dt(__import__("datetime").datetime.fromtimestamp(time.time() + error.retry_after), "R")}'
     elif isinstance(error, commands.MissingRequiredArgument):
         return await ctx.send_help(ctx.command)
-    elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)) or str(error) == f'The global check functions for command {ctx.command.name} failed.':
+    elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)):
         return
     try:
         await ctx.reply(content)
     except discord.HTTPException:
         await ctx.send(f'{ctx.author.mention} {content}')
     except discord.Forbidden:
-        try:
-            await ctx.author.send(f'> {ctx.channel.mention}: {ctx.message.content}\n{content}')
-        except discord.Forbidden:
-            pass
+        pass
 
 @bot.event
 async def on_guild_join(guild):
