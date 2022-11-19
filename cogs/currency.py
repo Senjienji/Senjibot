@@ -2,6 +2,7 @@ import discord
 from discord.ext import commands
 import pymongo
 import random
+import os
 
 client = pymongo.MongoClient(
     f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
