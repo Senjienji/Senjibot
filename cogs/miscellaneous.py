@@ -1,13 +1,15 @@
 import discord
 from discord.ext import commands
-#from replit import db
+import pymongo
 import random
 import time
+import os
 
-'''
-if 'Snipe' not in db:
-    db['Snipe'] = {} #{'channel.id': [user.id, 'content', 'timestamp']}f
-'''
+client = pymongo.MongoClient(
+    f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
+    server_api = pymongo.server_api.ServerApi('1'),
+)
+db = client.db
 
 class Miscellaneous(commands.Cog):
     @commands.command()
@@ -33,17 +35,18 @@ class Miscellaneous(commands.Cog):
         except discord.utils.asyncio.TimeoutError:
             await reply.edit(content = f"{equation} = {eval(equation)}\nYou didn't reply in time.")
     
-    '''
     @commands.command()
     async def prefix(self, ctx, prefix = None):
         if prefix == None:
             await ctx.reply(f'My current prefix is `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
         elif ctx.author.guild_permissions.manage_guild:
-            db['Prefix'][str(ctx.guild.id)] = prefix
+            prefix_cl.find_one_and_update(
+                {'guild': ctx.guild.id},
+                {'$set': {'prefix': prefix}}
+            )
             await ctx.reply(f'Prefix has been changed to `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
         else:
             raise commands.MissingPermissions(['manage_guild'])
-    '''
     
     @commands.command(aliases = ['cd'])
     async def cooldown(self, ctx):
@@ -137,29 +140,6 @@ Version: {discord.__version__}''',
         ))
         for i in range(len(options[:10])):
             await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
-
-'''
-    @commands.Cog.listener() 
-    async def on_message_delete(self, message):
-        db['Snipe'][str(message.channel.id)] = [message.author.id, message.content, message.created_at.timestamp(), message.attachments[0].url if len(message.attachments) > 0 else None]
-    
-    @commands.command()
-    async def snipe(self, ctx, channel: discord.TextChannel = None):
-        if channel == None:
-            channel = ctx.channel
-        if str(channel.id) in db['Snipe']:
-            embed = discord.Embed(
-                title = f'By {ctx.guild.get_member(db["Snipe"][str(channel.id)][0])}',
-                description = db['Snipe'][str(channel.id)][1],
-                timestamp = __import__('datetime').datetime.fromtimestamp(db['Snipe'][str(channel.id)][2]),
-                color = 0xffe5ce
-            )
-            if db['Snipe'][str(channel.id)][3]:
-                embed.set_image(url = db['Snipe'][str(channel.id)][3])
-            await ctx.reply(embed = embed)
-        else:
-            await ctx.reply('Nothing found.')
-'''
 
 async def setup(bot):
     await bot.add_cog(Miscellaneous())
