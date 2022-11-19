@@ -10,6 +10,7 @@ client = pymongo.MongoClient(
     server_api = pymongo.server_api.ServerApi('1'),
 )
 db = client.db
+prefix_cl = db.prefix
 
 class Miscellaneous(commands.Cog):
     @commands.command()
