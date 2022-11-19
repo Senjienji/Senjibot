@@ -1,4 +1,4 @@
-import flask 
+import flask
 from threading import Thread
 import discord
 
