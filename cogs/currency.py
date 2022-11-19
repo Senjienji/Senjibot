@@ -150,7 +150,7 @@ class Currency(commands.Cog):
             await ctx.reply('amount must be greater than 0.')
     
     @commands.command(cooldown_after_parsing = True)
-    @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
+    @commands.cooldown(rate = 1, per = 30 * 60, type = commands.BucketType.user)
     async def work(self, ctx):
         if currency_cl.find_one({'user': ctx.author.id}) == None:
             currency_cl.insert_one({
