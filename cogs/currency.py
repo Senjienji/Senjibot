@@ -300,7 +300,7 @@ class Currency(commands.Cog):
                         wallet = currency_cl.find_one({'user': inter.user.id})['wallet']
                         price = shop_cl.find_one({'guild': inter.guild_id})['items'][select.values[0]]
                         if wallet >= price:
-                            currency.find_one_and_update(
+                            currency_cl.find_one_and_update(
                                 {'user': inter.user.id},
                                 {'$inc': {'wallet': -price}}
                             )
