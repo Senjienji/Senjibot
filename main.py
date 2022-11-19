@@ -43,6 +43,7 @@ bot = commands.Bot(
         roles = False,
         replied_user = False
     ), intents = discord.Intents(
+        members = True,
         messages = True,
         message_content = True
     )
