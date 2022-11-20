@@ -42,7 +42,7 @@ class Miscellaneous(commands.Cog):
             await ctx.reply(f'My current prefix is `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
         elif ctx.author.guild_permissions.manage_guild:
             prefix_cl.find_one_and_update(
-                {'guild': ctx.guild.id},
+                {'guild': ctx.guild.id, 'bot': ctx.bot.user.id},
                 {'$set': {'prefix': prefix}}
             )
             await ctx.reply(f'Prefix has been changed to `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
