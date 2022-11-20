@@ -291,6 +291,12 @@ class Currency(commands.Cog):
                 class Shop(discord.ui.View):
                     @discord.ui.select(placeholder = 'Select an item', options = options)
                     async def menu(self, inter, select):
+                        if select.options != [discord.SelectOption(
+                            label = name,
+                            description = f'${price}'
+                        ) for name, price in shop_cl.find_one({'guild': ctx.guild.id})['items'].items()]:
+                            return await inter.response.send_message(f'This menu is outdated, please run this command again.')
+                        
                         if currency_cl.find_one({'user': inter.user.id}) == None:
                             currency_cl.insert_one({
                                 'user': inter.user.id,
