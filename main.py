@@ -26,12 +26,13 @@ class MinimalHelpCommand(commands.MinimalHelpCommand):
 def get_prefix(bot, message):
     if message.guild == None:
         return 's!'
-    if prefix_cl.find_one({'guild': message.guild.id}) == None: 
+    if prefix_cl.find_one({'guild': message.guild.id, 'bot': bot.user.id}) == None: 
         prefix_cl.insert_one({
             'guild': message.guild.id,
+            'bot': bot.user.id,
             'prefix': 's!'
         })
-    return prefix_cl.find_one({'guild': message.guild.id})['prefix']
+    return prefix_cl.find_one({'guild': message.guild.id, 'bot': bot.user.id})['prefix']
 
 bot = commands.Bot(
     command_prefix = get_prefix,
