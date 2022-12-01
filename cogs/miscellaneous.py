@@ -10,7 +10,7 @@ client = pymongo.MongoClient(
     server_api = pymongo.server_api.ServerApi('1'),
 )
 db = client.senjibot
-prefix_cl = db.prefix
+prefix_col = db.prefix
 
 class Miscellaneous(commands.Cog):
     @commands.command()
