@@ -9,8 +9,8 @@ client = pymongo.MongoClient(
     f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
     server_api = pymongo.server_api.ServerApi('1'),
 )
-db = client.db
-prefix_cl = db.prefix
+db = client.senjibot
+prefix_col = db.prefix
 
 class MinimalHelpCommand(commands.MinimalHelpCommand):
     async def send_pages(self):
@@ -26,13 +26,14 @@ class MinimalHelpCommand(commands.MinimalHelpCommand):
 def get_prefix(bot, message):
     if message.guild == None:
         return 's!'
-    if prefix_cl.find_one({'guild': message.guild.id, 'bot': bot.user.id}) == None: 
-        prefix_cl.insert_one({
+    doc = prefix_col.find_one({'guild': message.guild.id})
+    if doc == None:
+        doc = {
             'guild': message.guild.id,
-            'bot': bot.user.id,
             'prefix': 's!'
-        })
-    return prefix_cl.find_one({'guild': message.guild.id, 'bot': bot.user.id})['prefix']
+        }
+        prefix_col.insert_one(doc)
+    return doc['prefix']
 
 bot = commands.Bot(
     command_prefix = get_prefix,
@@ -47,7 +48,9 @@ bot = commands.Bot(
         guilds = True,
         members = True,
         messages = True,
-        message_content = True
+        message_content = True,
+        reactions = True,
+        emojis = True
     )
 )
 
@@ -93,42 +96,6 @@ async def on_guild_join(guild):
 @bot.event
 async def on_guild_remove(guild):
     await bot.get_user(bot.owner_id).send(f'Removed from `{guild.name}`.')
-
-@bot.command(hidden = True)
-@commands.is_owner()
-async def load(ctx, extension = None):
-    if extension == None:
-        for extension in os.listdir('./cogs'):
-            if extension.endswith('py'):
-                await bot.load_extension(f'cogs.{extension[:-3]}')
-        await ctx.reply(f'`{", ".join(i[5:] for i in bot.extensions.keys())}` are loaded')
-    else:
-        await bot.load_extension(f'cogs.{extension}')
-        await ctx.reply(f'`{extension}` loaded.')
-
-@bot.command(hidden = True)
-@commands.is_owner()
-async def reload(ctx, extension = None):
-    if extension == None:
-        extensions = tuple(bot.extensions.keys())
-        for extension in extensions:
-            await bot.reload_extension(extension)
-        await ctx.reply(f'`{", ".join(i[5:] for i in bot.extensions.keys())}` are reloaded.')
-    else:
-        await bot.reload_extension(f'cogs.{extension}')
-        await ctx.reply(f'`{extension}` reloaded.')
-
-@bot.command(hidden = True)
-@commands.is_owner()
-async def unload(ctx, extension=None):
-    if extension == None:
-        extensions = tuple(bot.extensions.keys())
-        for extension in extensions:
-            await bot.unload_extension(extension)
-        await ctx.reply(f'`{", ".join(i[5:] for i in extensions)}` are unloaded.')
-    else:
-        await bot.unload_extension(f'cogs.{extension}')
-        await ctx.reply(f'`{extension}` unloaded.')
 
 @bot.command(hidden = True)
 @commands.is_owner()
