@@ -9,7 +9,7 @@ client = pymongo.MongoClient(
     f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
     server_api = pymongo.server_api.ServerApi('1'),
 )
-db = client.db
+db = client.senjibot
 prefix_cl = db.prefix
 
 class Miscellaneous(commands.Cog):
@@ -41,8 +41,8 @@ class Miscellaneous(commands.Cog):
         if prefix == None:
             await ctx.reply(f'My current prefix is `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
         elif ctx.author.guild_permissions.manage_guild:
-            prefix_cl.find_one_and_update(
-                {'guild': ctx.guild.id, 'bot': ctx.bot.user.id},
+            prefix_col.find_one_and_update(
+                {'guild': ctx.guild.id},
                 {'$set': {'prefix': prefix}}
             )
             await ctx.reply(f'Prefix has been changed to `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
@@ -53,7 +53,15 @@ class Miscellaneous(commands.Cog):
     async def cooldown(self, ctx):
         await ctx.reply(embed = discord.Embed(
             title = 'Cooldowns',
-            description = '\n'.join(f'{index}. `{command.name}`: <t:{int(time.time() + command.get_cooldown_retry_after(ctx))}:F>' for index, command in enumerate(filter(lambda command: command.is_on_cooldown(ctx), ctx.bot.commands), start = 1)) or 'Nothing found.',
+            description = '\n'.join(
+                f'{index}. `{command.name}`: <t:{int(time.time() + command.get_cooldown_retry_after(ctx))}:F>' for index, command in enumerate(
+                    filter(
+                        lambda command: command.is_on_cooldown(ctx),
+                        ctx.bot.commands
+                    ),
+                    start = 1
+                )
+            ) or 'Nothing found.',
             color = 0xffe5ce
         ).set_footer(
             text = ctx.author.display_name,
@@ -120,7 +128,7 @@ Version: {discord.__version__}''',
         ).set_footer(
             text = ctx.author.display_name,
             icon_url = ctx.author.display_avatar.url
-        ), view = discord.ui.View().add_item(discord.ui.button(
+        ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
             url = user.display_avatar.url,
             style = discord.ButtonStyle.link
