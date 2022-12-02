@@ -57,6 +57,8 @@ class Utility(commands.Cog):
         embed = message.embeds[0]
         embed.title = title
         embed.description = desc
+        if ctx.message.attachments != []:
+            embed.set_image(url = ctx.message.attachments[0].url)
         await message.edit(embed = embed)
 
 async def setup(bot): 
