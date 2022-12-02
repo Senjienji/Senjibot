@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import datetime
+import pymongo
 
 client = pymongo.MongoClient(
     f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
