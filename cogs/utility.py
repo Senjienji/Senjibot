@@ -45,6 +45,19 @@ class Utility(commands.Cog):
         if ctx.message.attachments != []:
             embed.set_image(url = ctx.message.attachments[0].url)
         await ctx.send(embed = embed)
+    
+    @commands.command(hidden = True)
+    @commands.owner_only()
+    async def edit_embed(self, ctx, msg_id: int, title, desc, channel: discord.TextChannel = None):
+        if channel == None:
+            channel = ctx.channel
+        message = await channel.fetch_message(msg_id)
+        if message.author != ctx.me or message.embeds == []: return
+        
+        embed = message.embeds[0]
+        embed.title = title
+        embed.description = desc
+        await message.edit(embed = embed)
 
-async def setup(bot):
+async def setup(bot): 
     await bot.add_cog(Utility())
