@@ -5,13 +5,6 @@ import random
 import time
 import os
 
-client = pymongo.MongoClient(
-    f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
-    server_api = pymongo.server_api.ServerApi('1'),
-)
-db = client.senjibot
-prefix_col = db.prefix
-
 class Miscellaneous(commands.Cog):
     @commands.command()
     async def math(self, ctx):
@@ -35,19 +28,6 @@ class Miscellaneous(commands.Cog):
             await message.reply(embed = embed)
         except discord.utils.asyncio.TimeoutError:
             await reply.edit(content = f"{equation} = {eval(equation)}\nYou didn't reply in time.")
-    
-    @commands.command()
-    async def prefix(self, ctx, prefix = None):
-        if prefix == None:
-            await ctx.reply(f'My current prefix is `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
-        elif ctx.author.guild_permissions.manage_guild:
-            prefix_col.find_one_and_update(
-                {'guild': ctx.guild.id},
-                {'$set': {'prefix': prefix}}
-            )
-            await ctx.reply(f'Prefix has been changed to `{ctx.bot.command_prefix(ctx.bot, ctx.message)}`.')
-        else:
-            raise commands.MissingPermissions(['manage_guild'])
     
     @commands.command(aliases = ['cd'])
     async def cooldown(self, ctx):
