@@ -47,7 +47,7 @@ class Utility(commands.Cog):
         await ctx.send(embed = embed)
     
     @commands.command(hidden = True)
-    @commands.owner_only()
+    @commands.is_owner()
     async def edit_embed(self, ctx, msg_id: int, title, desc, channel: discord.TextChannel = None):
         if channel == None:
             channel = ctx.channel
