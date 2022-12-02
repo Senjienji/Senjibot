@@ -175,7 +175,7 @@ class Currency(commands.Cog):
     async def give(self, ctx, member: discord.Member, amount: int):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
-            doc ={
+            doc = {
                 'user': ctx.author.id,
                 'balance': [0, 0]
             }
@@ -184,8 +184,8 @@ class Currency(commands.Cog):
         if member == ctx.author or member.bot:
             await ctx.reply('No')
             return ctx.command.reset_cooldown(ctx)
-         doc = currency_col.find_one({'user': member.id})
-         if doc == None:
+        doc = currency_col.find_one({'user': member.id})
+        if doc == None:
             doc = {
                 'user': member.id,
                 'balance': [0, 0]
