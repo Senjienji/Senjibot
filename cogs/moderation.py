@@ -242,4 +242,4 @@ class Moderation(commands.Cog):
             await ctx.reply('Emoji not found.')
 
 async def setup(bot):
-    await bot.add_cog(Moderation())
+    await bot.add_cog(Moderation(bot))
