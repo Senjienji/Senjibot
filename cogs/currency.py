@@ -29,7 +29,7 @@ class Currency(commands.Cog):
         wallet, bank = doc['balance']
         await ctx.reply(embed = discord.Embed(
             title = f"{member.display_name}'s Balance",
-            description = f'Wallet: ${wallet}\nBank: ${bank}',
+            description = f'Wallet: ${wallet}\nBank: ${bank} / $1000',
             color = 0xffe5ce
         ).set_footer(
             text = ctx.author.display_name,
@@ -102,11 +102,12 @@ class Currency(commands.Cog):
             }
             currency_col.insert_one(doc)
         bal = doc['balance']
-        wallet = bal[0]
+        wallet, bank = bal
         if amount.lower() == 'all':
             amount = wallet
         else:
             amount = int(amount)
+        amount = min(amount, 1000 - bank)
         if amount > 0:
             if wallet >= amount:
                 bal[0] -= amount
@@ -270,7 +271,7 @@ class Currency(commands.Cog):
     
     @commands.command(hidden = True)
     @commands.is_owner()
-    async def set(self, ctx, member: discord.Member, type: int, amount: int):
+    async def set(self, ctx, member: discord.Member, type, amount: int):
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
             doc = {
@@ -278,14 +279,15 @@ class Currency(commands.Cog):
                 'balance': [0, 0]
             }
             currency_col.insert_one(doc)
+        type = type.lower()
         bal = doc['balance']
-        if type in (0, 1):
-            bal[type] = amount
-            currency_cl.update_one(
+        if type in ('wallet', 'bank'):
+            bal[('wallet', 'bank').index(type)] = amount
+            currency_col.update_one(
                 {'user': member.id},
                 {'$set': {'balance': bal}}
             )
-            await ctx.reply(f"`{member}`'s {['wallet', 'bank'][type]} balance has been set to ${amount}.")
+            await ctx.reply(f"`{member}`'s {type} balance has been set to ${amount}.")
         else:
             await ctx.reply('invalid type')
     
