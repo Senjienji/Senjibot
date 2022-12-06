@@ -72,7 +72,6 @@ class Moderation(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        print(f'{payload.emoji = }')
         guild = self.bot.get_guild(payload.guild_id)
         if guild == None: return
         
@@ -91,9 +90,7 @@ class Moderation(commands.Cog):
                     await member.add_roles(role)
                     message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
                     for reaction in message.reactions:
-                        print(f'{reaction.emoji = }')
-                        print(f'{reaction.emoji == payload.emoji}')
-                        if reaction.emoji != payload.emoji and str(reaction.emoji) in rr[str(payload.message_id)]:
+                        if reaction.emoji != str(payload.emoji) and str(reaction.emoji) in rr[str(payload.message_id)]:
                             async for user in reaction.users():
                                 if user == member:
                                     await message.remove_reaction(reaction.emoji, member)
