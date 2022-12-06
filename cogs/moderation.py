@@ -78,14 +78,28 @@ class Moderation(commands.Cog):
         doc = rr_col.find_one({'guild': guild.id})
         if doc == None: return
         
+        member = payload.member
         rr = doc['reaction_roles']
         if str(payload.message_id) in rr:
+            type = rr[str(payload.message_id)]['type']
             if str(payload.emoji) in rr[str(payload.message_id)]:
-                await payload.member.add_roles(
-                    guild.get_role(
-                        rr[str(payload.message_id)][str(payload.emoji)]
-                    )
-                )
+                role = guild.get_role(rr[str(payload.message_id)][str(payload.emoji)])
+                if type == 0: #normal
+                    await member.add_roles(role)
+                elif type == 1: #unique
+                    await member.add_roles(role)
+                    message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
+                    for reaction in message.reactions:
+                        if reaction.emoji != payload.emoji and str(reaction.emoji) in rr[str(payload.message_id)]:
+                            async for user in reaction.users():
+                                if user == member:
+                                    await message.remove_reaction(reaction.emoji, member)
+                elif type == 2: #reversed
+                    await member.remove_roles(role)
+                elif type == 3: #verify
+                    await member.add_roles(role)
+                elif type == 4: #drop
+                    await member.remove_roles(role)
     
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
@@ -95,14 +109,22 @@ class Moderation(commands.Cog):
         doc = rr_col.find_one({'guild': guild.id})
         if doc == None: return
         
+        member = guild.get_member(payload.user_id)
         rr = doc['reaction_roles']
         if str(payload.message_id) in rr:
+            type = rr[str(payload.message_id)]['type']
             if str(payload.emoji) in rr[str(payload.message_id)]:
-                await guild.get_member(payload.user_id).remove_roles(
-                    guild.get_role(
-                        rr[str(payload.message_id)][str(payload.emoji)]
-                    )
-                )
+                role = guild.get_role(rr[str(payload.message_id)][str(payload.emoji)])
+                if type == 0: #normal
+                    await member.remove_roles(role)
+                elif type == 1: #unique
+                    await member.remove_roles(role)
+                elif type == 2: #reversed
+                    await member.add_roles(role)
+                elif type == 3: #verify
+                    pass
+                elif type == 4: #drop
+                    pass
     
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -133,14 +155,21 @@ class Moderation(commands.Cog):
                 {'$set': {'reaction_roles': rr}}
             )
     
-    @commands.group(aliases = ['rr'])
+    @commands.group(
+        aliases = ['rr'],
+        help = '''Type 0: Normal
+Type 1: Unique
+Type 2: Reversed
+Type 3: Verify
+Type 4: Drop'''
+    )
     @commands.guild_only()
     async def reaction_role(self, ctx):
         doc = rr_col.find_one({'guild': ctx.guild.id})
         if doc == None:
             doc = {
                 'guild': ctx.guild.id,
-                'reaction_roles': {} #{message.id: {emoji: role.id}}
+                'reaction_roles': {} #{message.id: {'type': 0, emoji: role.id}}
             }
             rr_col.insert_one(doc)
         if ctx.invoked_subcommand == None:
@@ -149,12 +178,14 @@ class Moderation(commands.Cog):
                 description = 'None',
                 color = 0xffe5ce
             )
-            for message, rr in doc['reaction_roles'].items():
-                if len(rr) > 0:
+            for msg_id, rr in doc['reaction_roles'].items():
+                if len(rr) > 1:
                     embed.description = None
                     embed.add_field(
-                        name = message,
-                        value = '\n'.join(f'{emoji} {ctx.guild.get_role(role).mention}' for emoji, role in rr.items())
+                        name = f'{msg_id} (Type {rr["type"]})',
+                        value = '\n'.join(
+                            f'{emoji} {ctx.guild.get_role(role).mention}' for emoji, role in rr.items() if emoji != 'type'
+                        )
                     )
             await ctx.reply(embed = embed)
     
@@ -167,7 +198,7 @@ class Moderation(commands.Cog):
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {} #{emoji: role.id}
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
         if emoji in rr[msg_id]:
             await ctx.reply('Emoji already added.')
         elif role.id in rr[msg_id].values():
@@ -181,9 +212,8 @@ class Moderation(commands.Cog):
             for reaction in message.reactions:
                 if str(reaction.emoji) == emoji:
                     async for user in reaction.users():
-                        if isinstance(user, discord.User):
-                            continue
-                        await user.add_roles(role)
+                        if isinstance(user, discord.Member):
+                            await user.add_roles(role)
             await ctx.reply(f'Reaction role added to **{msg_id}**')
     
     @reaction_role.command()
@@ -191,10 +221,11 @@ class Moderation(commands.Cog):
         if channel == None:
             channel = ctx.channel
         message = await channel.fetch_message(int(msg_id))
+        await ctx.message.add_reaction(emoji)
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {} #{emoji: role.id}
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
         if emoji in rr[msg_id]:
             old_role = ctx.guild.get_role(rr[msg_id][emoji])
             rr[msg_id][emoji] = role.id
@@ -205,13 +236,28 @@ class Moderation(commands.Cog):
             for reaction in message.reactions:
                 if str(reaction.emoji) == emoji:
                     async for user in reaction.users():
-                        if isinstance(user, discord.User):
-                            continue
-                        await user.add_roles(role)
-                        await user.remove_roles(old_role)
+                        if isinstance(user, discord.Member):
+                            await user.add_roles(role)
+                            await user.remove_roles(old_role)
             await ctx.reply(f'Role changed.')
         else:
             await ctx.reply('Emoji not found.')
+    
+    @reaction_role.command()
+    async def type(self, ctx, msg_id, type: int):
+        doc = rr_col.find_one({'guild': ctx.guild.id})
+        rr = doc['reaction_roles']
+        if msg_id not in rr:
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
+        if 0 <= type <= 4:
+            rr[msg_id]['type'] = type
+            await ctx.reply(f'**{msg_id}** type set to {type}.')
+            rr_col.update_one(
+                {'_id': doc['_id']},
+                {'$set': {'reaction_roles': rr}}
+            )
+        else:
+            await ctx.reply(f'Invalid type.')
     
     @reaction_role.command()
     async def remove(self, ctx, msg_id, emoji, channel: discord.TextChannel = None):
@@ -222,7 +268,7 @@ class Moderation(commands.Cog):
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {} #{emoji: role.id}
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
         if emoji in rr[msg_id]:
             role = ctx.guild.get_role(rr[msg_id][emoji])
             del rr[msg_id][emoji]
@@ -233,13 +279,52 @@ class Moderation(commands.Cog):
             for reaction in message.reactions:
                 if str(reaction.emoji) == emoji:
                     async for user in reaction.users():
-                        if isinstance(user, discord.User):
-                            continue
-                        await user.remove_roles(role)
-            await message.clear_reaction(emoji)
+                        if isinstance(user, discord.Member):
+                            await user.remove_roles(role)
+                await message.remove_reaction(reaction.emoji, ctx.me)
             await ctx.reply('Emoji removed.')
         else:
             await ctx.reply('Emoji not found.')
+    
+    @reaction_role.command()
+    async def purge(ctx, msg_id = None):
+        doc = rr_col.find_one({'guild': ctx.guild.id})
+        rr = doc['reaction_roles']
+        if msg_id == None:
+            rr = {}
+            await ctx.reply('ALL reaction roles has been removed.')
+        elif msg_id in rr:
+            del rr[msg_id]
+            await ctx.reply(f'Purged reaction roles for **{msg_id}**')
+        else:
+            return await ctx.reply('Message not found.')
+        rr_col.update_one(
+            {'_id': doc['_id']},
+            {'$set': {'reaction_roles': rr}}
+        )
+    
+    @reaction_role.command()
+    async def move(self, ctx, old_msg, new_msg, channel: discord.TextChannel = None):
+        if channel == None:
+            channel = ctx.channel
+        doc = rr_col.find_one({'guild': ctx.guild.id})
+        rr = doc['reaction_roles']
+        if old_msg in rr:
+            if new_msg not in rr:
+                rr[new_msg] = {'type': 0} #{emoji: role.id}
+            rr[new_msg] = rr[old_msg]
+            message = await channel.fetch_message(int(new_msg))
+            for emoji in rr[old_msg].values():
+                if emoji != 'type':
+                    await message.add_reaction(emoji)
+            del rr[old_msg]
+            rr_col.update_one(
+                {'_id': doc['_id']},
+                {'$set': {'reaction_roles': rr}}
+            )
+            await ctx.reply(f'{len(rr[new_msg]) - 1} reaction roles from **{old_msg}** has been moved to **{new_msg}**')
+        else:
+            await ctx.reply('Message not found.')
 
 async def setup(bot):
     await bot.add_cog(Moderation(bot))
