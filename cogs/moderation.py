@@ -90,12 +90,11 @@ class Moderation(commands.Cog):
                     await member.add_roles(role)
                     message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
                     for reaction in message.reactions:
-                        if reaction.emoji == payload.emoji: continue
-                        
-                        if str(reaction.emoji) in rr[str(payload.message_id)]:
+                        if reaction.emoji != payload.emoji and str(reaction.emoji) in rr[str(payload.message_id)]:
                             async for user in reaction.users():
                                 if user == member:
                                     await message.remove_reaction(reaction.emoji, member)
+                                    break
                 elif type == 2: #reversed
                     await member.remove_roles(role)
                 elif type == 3: #verify
