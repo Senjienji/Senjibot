@@ -98,7 +98,7 @@ class Utility(commands.Cog):
             created_at = datetime.datetime.fromtimestamp(fields['created_at'])
             try:
                 reference = await channel.fetch_message(fields['reference'])
-            except (discord.NotFound, discord.Forbidden):
+            except discord.HTTPException:
                 reference = None
             
             embed = discord.Embed(
