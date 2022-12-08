@@ -5,8 +5,8 @@ import time
 import os
 
 class Miscellaneous(commands.Cog):
-    @commands.command()
-    async def math(self, ctx):
+    @commands.command(name = 'equation')
+    async def equation(self, ctx):
         equation = f'{random.randint(1, 99)} {random.choice(("+", "-", "*", "%", "//"))} {random.randint(1, 99)}'
         reply = await ctx.reply(f'{equation} = ?')
         try:
