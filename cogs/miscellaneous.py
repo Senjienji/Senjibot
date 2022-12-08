@@ -1,12 +1,13 @@
 import discord
 from discord.ext import commands
+import inspect
 import random
 import time
 import os
 
 class Miscellaneous(commands.Cog):
-    @commands.command()
-    async def math(self, ctx):
+    @commands.command(name = 'equation')
+    async def equation(self, ctx):
         equation = f'{random.randint(1, 99)} {random.choice(("+", "-", "*", "%", "//"))} {random.randint(1, 99)}'
         reply = await ctx.reply(f'{equation} = ?')
         try:
@@ -99,7 +100,7 @@ Version: {discord.__version__}''',
         if user == None:
             user = ctx.author
         await ctx.reply(embed = discord.Embed(
-            title = f'{user.display_name.replace(" ", "+")}.{"gif" if user.display_avatar.is_animated() else "png"}',
+            title = f'{user.display_name}.{"gif" if user.display_avatar.is_animated() else "png"}',
             description = f'[Link]({user.display_avatar.url})',
             color = 0xffe5ce
         ).set_image(
@@ -116,8 +117,7 @@ Version: {discord.__version__}''',
     @commands.command()
     async def poll(self, ctx, name, *options):
         if options == ():
-            param = __import__('inspect').Parameter
-            raise commands.MissingRequiredArgument(param('options', param.VAR_POSITIONAL))
+            raise commands.MissingRequiredArgument(inspect.Parameter('options', inspect.Parameter.VAR_POSITIONAL))
         message = await ctx.send(embed = discord.Embed(
             title = f'Poll: {name}',
             description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options[:10])),
