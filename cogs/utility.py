@@ -4,18 +4,11 @@ import random
 import time
 
 class Utility(commands.Cog):
-    @commands.command(name = 'eval')
-    async def evaluate(self, ctx, *, content):
+    @commands.command()
+    async def math(self, ctx, *, content):
         await ctx.reply(embed = discord.Embed(
-            title = 'Evaluation',
-            description = discord.utils.escape_markdown(str(eval(content, {
-                'ctx': ctx,
-                'discord': discord,
-                'choose': random.choice,
-                'random': random.randint,
-                'timestamp': __import__('time').time,
-                'shuffle': lambda x: random.sample(x, len(x))
-            }, {i: None for i in (
+            title = 'Result',
+            description = discord.utils.escape_markdown(str(eval(content, {}, {i: None for i in (
                 '__import__',
                 'copyright',
                 'credits',
@@ -46,7 +39,7 @@ class Utility(commands.Cog):
             embed.set_image(url = ctx.message.attachments[0].url)
         await ctx.send(embed = embed)
     
-    @commands.command(hidden = True)
+    @commands.command(name = 'edit-embed', hidden = True)
     @commands.is_owner()
     async def edit_embed(self, ctx, msg_id: int, title, desc, channel: discord.TextChannel = None):
         if channel == None:
