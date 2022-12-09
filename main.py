@@ -108,19 +108,26 @@ async def doc(ctx, *, query=None):
 @bot.command(name = 'exec', hidden = True)
 @commands.is_owner()
 async def execute(ctx, *, content):
+    exec(content)
+    await ctx.message.add_reaction('✅')
+
+@bot.command(name = 'eval', hidden = True)
+@commands.is_owner()
+async def evaluate(ctx, *, content):
+    embed = discord.Embed(
+        title = 'Evaluation',
+        color = 0xffe5ce
+    ).set_footer(
+        text = ctx.author.display_name,
+        icon_url = ctx.author_display_avatar.url
+    )
     if content.startswith('await '):
-        output = await eval(content[6:])
-        await ctx.reply(embed = discord.Embed(
-            title = 'Await Evaluation',
-            description = discord.utils.escape_markdown(output),
-            color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author_display_avatar.url
-        ))
+        embed.title = 'Async ' + embed.title
+        embed.description = await eval(content[6:])
     else:
-        exec(content)
-        await ctx.message.add_reaction('✅')
+        embed.description = eval(content)
+    embed.description = discord.utils.escape_markdown(str(embed.description))
+    await ctx.reply(embed = embed)
 
 @bot.command(hidden = True)
 @commands.is_owner()
