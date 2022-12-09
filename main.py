@@ -119,13 +119,13 @@ async def evaluate(ctx, *, content):
         color = 0xffe5ce
     ).set_footer(
         text = ctx.author.display_name,
-        icon_url = ctx.author_display_avatar.url
+        icon_url = ctx.author.display_avatar.url
     )
     if content.startswith('await '):
         embed.title = 'Async ' + embed.title
-        embed.description = await eval(content[6:])
+        embed.description = await eval(content[6:], {**globals(), **locals()}, {})
     else:
-        embed.description = eval(content)
+        embed.description = eval(content, {**globals(), **locals()}, {})
     embed.description = discord.utils.escape_markdown(str(embed.description))
     await ctx.reply(embed = embed)
 
