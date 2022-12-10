@@ -1,8 +1,9 @@
 import discord
 from discord import app_commands
+from discord.ext import commands
+from typing import *
 import pymongo
 import random
-from typing import *
 import os
 
 client = pymongo.MongoClient(
@@ -14,9 +15,9 @@ currency_col = db.currency
 shop_col = db.shop
 
 class Currency(commands.Cog):
-    def __init__(self, client: discord.Client):
+    def __init__(self, bot: commands.Bot):
         super().__init__()
-        self.client = client
+        self.bot = bot
     
     @app_commands.command(description = "Shows your (or someone else's) balance")
     @app_commands.describe(member = 'The member to choose (must not be a bot)')
@@ -280,7 +281,7 @@ class Currency(commands.Cog):
             await inter.response.send_message('You need at least $20 to rob someone.', ephemeral = True)
     
     def check(self, inter: discord.Interaction):
-        return inter.user.id == self.client.owner_id
+        return inter.user.id == self.bot.owner_id
     
     @app_commands.command(description = 'This command is owner only.')
     @app_commands.describe(
@@ -441,5 +442,5 @@ class Currency(commands.Cog):
         else:
             await inter.response.send_message(f'Item "{name}" not found.', ephemeral = True)
 
-async def setup(client):
-    await client.add_cog(Currency(client))
+async def setup(bot):
+    await bot.add_cog(Currency(bot))
