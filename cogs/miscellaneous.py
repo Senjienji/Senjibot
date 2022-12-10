@@ -9,6 +9,10 @@ class Miscellaneous(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         self.bot = bot
+        self.bot.tree.add_command(app_commands.ContextMenu(
+            name = 'Avatar',
+            callback = self.avatar_callback,
+        ))
     
     @app_commands.command(description = 'Sends your text')
     @app_commands.describe(
@@ -80,6 +84,23 @@ Version: {discord.__version__}''',
             style = discord.ButtonStyle.link
         )))
     
+    async def avatar_callback(self, inter: discord.Interaction, member: discord.Member):
+        await inter.response.send_message(embed = discord.Embed(
+            title = f'{member.display_name}.{"gif" if member.display_avatar.is_animated() else "png"}',
+            description = f'[Link]({member.display_avatar.url})',
+            color = 0xffe5ce
+        ).set_image(
+            url = member.display_avatar.url
+        ).set_author(
+            name = inter.user.display_name,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
+        ), view = discord.ui.View().add_item(discord.ui.Button(
+            label = 'Link',
+            url = member.display_avatar.url,
+            style = discord.ButtonStyle.link
+        )))
+    
     @app_commands.command(description = 'Shows the icon of a server')
     @app_commands.describe(server = 'The server to show')
     async def icon(self, inter, server: Optional[discord.Guild] = None):
@@ -101,8 +122,6 @@ Version: {discord.__version__}''',
             style = discord.ButtonStyle.link
         )))
     
-    @app_commands.context_menu()
-    
     @app_commands.command(description = 'Sends a poll for everyone to vote')
     @app_commands.describe(
         title = 'The title of the poll',
@@ -111,7 +130,7 @@ Version: {discord.__version__}''',
     )
     async def poll(self, inter, title, channel: Optional[discord.TextChannel] = None, options):
         if channel == None:
-           channel = inter.channel
+            channel = inter.channel
         options = options.split()[:10]
         if channel.permissions_for(inter.user).send_messages:
             message = await channel.send(embed = discord.Embed(
