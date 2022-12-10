@@ -1,8 +1,7 @@
 import discord
 from discord import app_commands
+from discord.ext import commands
 from typing import *
-import random
-import time
 import os
 
 class Miscellaneous(commands.Cog):
