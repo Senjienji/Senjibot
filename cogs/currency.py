@@ -1,5 +1,6 @@
 import discord
 from discord import app_commands
+from discord.ext import commands
 import pymongo
 import random
 from typing import *
@@ -14,6 +15,10 @@ currency_col = db.currency
 shop_col = db.shop
 
 class Currency(commands.Cog):
+    def __init__(self, bot: commands.Bot):
+        super().__init__()
+        self.bot = bot
+    
     @app_commands.command(description = "Shows your (or someone else's) balance")
     @app_commands.describe(member = 'The member to choose (must not be a bot)')
     async def balance(self, inter, member: Optional[discord.Member] = None):
@@ -275,13 +280,16 @@ class Currency(commands.Cog):
         else:
             await inter.response.send_message('You need at least $20 to rob someone.', ephemeral = True)
     
+    def check(self, inter: discord.Interaction):
+        return inter.user.id == self.bot.owner_id
+    
     @app_commands.command(description = 'This command is owner only.')
     @app_commands.describe(
         member = 'The member to set their balance',
         type = 'Accepts "wallet" and "bank"',
         amount = 'The amount to set their balance to'
     )
-    @app_commands.check(lambda i: i.user.id == i.client.owner_id)
+    @app_commands.check(check)
     async def set(self, inter, member: discord.Member, type: Union['wallet', 'bank'], amount: int):
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
@@ -421,7 +429,7 @@ class Currency(commands.Cog):
             doc = {
                 'guild': inter.guild_id,
                 'items': {}
-            }
+            } 
             shop_col.insert_one(doc)
         items = doc['items']
         if name in items:
@@ -435,4 +443,4 @@ class Currency(commands.Cog):
             await inter.response.send_message(f'Item "{name}" not found.', ephemeral = True)
 
 async def setup(bot):
-    await bot.add_cog(Currency())
+    await bot.add_cog(Currency(bot))
