@@ -1,134 +1,134 @@
 import discord
-from discord.ext import commands
-import inspect
+from discord import app_commands
+from typing import *
 import random
 import time
 import os
 
 class Miscellaneous(commands.Cog):
-    @commands.command(name = 'equation')
-    async def equation(self, ctx):
-        equation = f'{random.randint(1, 99)} {random.choice(("+", "-", "*", "%", "//"))} {random.randint(1, 99)}'
-        reply = await ctx.reply(f'{equation} = ?')
-        try:
-            message = await ctx.bot.wait_for('message', check = lambda message: message.channel == ctx.channel and message.author == ctx.author, timeout = 60)
-            embed = discord.Embed(
-                description = f'{equation} = {eval(equation)}',
-                color = 0xffe5ce
-            ).set_footer(
-                text = f'{int((message.created_at - reply.created_at).total_seconds())} seconds'
-            )
-            try:
-                if int(message.content) == eval(equation):
-                    embed.title = 'Correct!'
-                else:
-                    embed.title = 'Wrong!'
-            except ValueError:
-                embed.title = 'Invalid number passed.'
-            await message.reply(embed = embed)
-        except discord.utils.asyncio.TimeoutError:
-            await reply.edit(content = f"{equation} = {eval(equation)}\nYou didn't reply in time.")
+    def __init__(self, bot: commands.Bot):
+        super().__init__()
+        self.bot = bot
     
-    @commands.command(aliases = ['cd'])
-    async def cooldown(self, ctx):
-        await ctx.reply(embed = discord.Embed(
-            title = 'Cooldowns',
-            description = '\n'.join(
-                f'{index}. `{command.name}`: <t:{int(time.time() + command.get_cooldown_retry_after(ctx))}:F>' for index, command in enumerate(
-                    filter(
-                        lambda command: command.is_on_cooldown(ctx),
-                        ctx.bot.commands
-                    ),
-                    start = 1
-                )
-            ) or 'Nothing found.',
-            color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.display_avatar.url
-        ))
-
-    @commands.command()
-    async def say(self, ctx, *, content):
-        await ctx.send(content)
+    @app_commands.command(description = 'Sends your text')
+    @app_commands.describe(
+       content = 'The text to send',
+       channel = 'Where to send the text'
+    )
+    async def say(self, inter, content, channel: Optional[discord.TextChannel] = None):
+        if channel == None:
+            channel = inter.channel
+        if channel.permissions_for(inter.user).send_messages:
+            await channel.send('> ' + '\n> '.join(content.split()) + f'\n-{inter.user.mention}')
+            await inter.response.send_message('Message sent.', ephemeral = True)
+        else:
+            await inter.response.send_message('Missing `Send Messages` permission.', ephemeral = True)
     
-    @commands.command()
-    async def invite(self, ctx):
-        await ctx.reply(
-            '<https://Senjibot.senjienji.repl.co/invite>',
-            view = discord.ui.View().add_item(discord.ui.Button(
-                label = 'Link',
-                url = 'https://Senjibot.senjienji.repl.co/invite',
-                style = discord.ButtonStyle.link
-            ))
-        )
-    
-    @commands.command()
-    async def bot(self, ctx):
-        await ctx.reply(embed = discord.Embed(
+    @app_commands.command(description = 'Shows the information of Senjibot')
+    async def bot(self, inter):
+        await inter.response.send_message(embed = discord.Embed(
             title = 'Bot Info',
             description = f'''
-In: {len(ctx.bot.guilds)} guilds
-Latency: {int(ctx.bot.latency * 1000)}ms
-Uptime: {discord.utils.format_dt(ctx.bot.launch_time, "R")}
+In: {len(self.bot.guilds)} servers
+Latency: {int(self.bot.latency * 1000)}ms
+Uptime: {discord.utils.format_dt(self.bot.launch_time, "R")}
 Version: {discord.__version__}''',
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.display_avatar.url
+        ).set_author(
+            name = inter.user.display_name,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
         ))
     
-    @commands.command()
-    async def emoji(self, ctx, *, emoji: discord.Emoji):
-        await ctx.reply(embed = discord.Embed(
+    @app_commands.command(description = 'Shows the emoji image')
+    @app_commands.describe(emoji = 'The emoji to show')
+    async def emoji(self, ctx, emoji: discord.Emoji):
+        await inter.response.send_message(embed = discord.Embed(
             title = f'{emoji.name}.{"gif" if emoji.animated else "png"}',
             description = f'[Link]({emoji.url})',
             color = 0xffe5ce
         ).set_image(
             url = emoji.url
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.display_avatar.url
+        ).set_author(
+            name = inter.user.display_name,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
             url = emoji.url,
             style = discord.ButtonStyle.link
         )))
 
-    @commands.command()
-    async def avatar(self, ctx, *, user: discord.User = None):
+    @app_commands.command(description = "Shows an user's avatar")
+    @app_commands.describe(user = 'The user to show')
+    async def avatar(self, inter, user: Optional[discord.User] = None):
         if user == None:
-            user = ctx.author
-        await ctx.reply(embed = discord.Embed(
+            user = inter.user
+        await inter.response.send_message(embed = discord.Embed(
             title = f'{user.display_name}.{"gif" if user.display_avatar.is_animated() else "png"}',
             description = f'[Link]({user.display_avatar.url})',
             color = 0xffe5ce
         ).set_image(
             url = user.display_avatar.url
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.display_avatar.url
+        ).set_author(
+            name = inter.user.display_name,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
             url = user.display_avatar.url,
             style = discord.ButtonStyle.link
         )))
     
-    @commands.command()
-    async def poll(self, ctx, name, *options):
-        if options == ():
-            raise commands.MissingRequiredArgument(inspect.Parameter('options', inspect.Parameter.VAR_POSITIONAL))
-        message = await ctx.send(embed = discord.Embed(
-            title = f'Poll: {name}',
-            description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options[:10])),
+    @app_commands.command(description = 'Shows the icon of a server')
+    @app_commands.describe(server = 'The server to show')
+    async def icon(self, inter, server: Optional[discord.Guild] = None):
+        if server == None:
+            server = inter.guild
+        await inter.response.send_message(embed = discord.Embed(
+            title = f'{guild.name}.{"gif" if guild.icon.is_animated() else "png"}',
+            description = f'[Link][{guild.icon.url}]',
             color = 0xffe5ce
-        ).set_footer(
-            text = f'By {ctx.author}',
-            icon_url = ctx.author.display_avatar.url
-        ))
-        for i in range(len(options[:10])):
-            await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
+        ).set_image(
+            url = guild.icon.url
+        ).set_author(
+            name = inter.user.display_name,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
+        ), view = discord.ui.View().add_item(discord.ui.Button(
+            label = 'Link',
+            url = guild.icon.url,
+            style = discord.ButtonStyle.link
+        )))
+    
+    @app_commands.context_menu()
+    
+    @app_commands.command(description = 'Sends a poll for everyone to vote')
+    @app_commands.describe(
+        title = 'The title of the poll',
+        channel = 'Where to post the poll',
+        options = 'Separate options with a new line'
+    )
+    async def poll(self, inter, title, channel: Optional[discord.TextChannel] = None, options):
+        if channel == None:
+           channel = inter.channel
+        options = options.split()[:10]
+        if channel.permissions_for(inter.user).send_messages:
+            message = await channel.send(embed = discord.Embed(
+                title = title,
+                description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options)),
+                color = 0xffe5ce
+            ).set_author(
+                name = str(inter.user),
+                url = 'https://discord.com/users/{inter.user.id}',
+                icon_url = inter.user.display_avatar.url
+            ))
+            for i in range(len(options)):
+                await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
+            await inter.response.send_message('Poll sent.', ephemeral = True)
+        else:
+            await inter.response.send_message('Missing `Send Messages` permission', ephemeral = True)
 
 async def setup(bot):
-    await bot.add_cog(Miscellaneous())
-    bot.help_command.cog = Miscellaneous()
+    await bot.add_cog(Miscellaneous(bot))
+    bot.help_command.cog = Miscellaneous(bot)
