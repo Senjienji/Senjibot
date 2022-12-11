@@ -1,4 +1,5 @@
 import discord
+from discord import app_commands
 from discord.ext import commands
 import datetime
 import pymongo
@@ -10,11 +11,17 @@ client = pymongo.MongoClient(
 )
 db = client.senjibot
 snipe_col = db.snipe
+embed_col = db.embed
 
 class Utility(commands.Cog):
-    @commands.command()
-    async def math(self, ctx, *, content):
-        await ctx.reply(embed = discord.Embed(
+    def __init__(self, bot: commands.Bot):
+        super().__init__()
+        self.bot = bot
+    
+    @app_commands.command(description = 'Compiles math for you')
+    @app_commands.describe(content = 'you get the point')
+    async def math(self, inter, content):
+        await inter.response.send_message(embed = discord.Embed(
             title = 'Result',
             description = discord.utils.escape_markdown(str(eval(content, {}, {i: None for i in (
                 '__import__',
@@ -31,39 +38,81 @@ class Utility(commands.Cog):
                 'open'
             )}))),
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
-            icon_url = ctx.author.display_avatar.url
+        ).set_author(
+            name = inter.user,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
         ))
     
-    @commands.command()
-    async def embed(self, ctx, title, *, description):
+    @app_commands.command(description = 'Sends an embed')
+    @app_commands.describe(
+        title = "The embed's title",
+        description = "The embed's description",
+        attachment = 'An attachment to put inside the embed',
+        channel = "The channel to send the embed at\nRequires the `Send Messages` permission in that channel'
+    )
+    async def embed(self, inter, title, description, attachment: discord.Asset = None, channel: discord.TextChannel = None):
+        if channel == None:
+            channel = inter.channel
+        if not channel.permissions_for(inter.user).send_messages:
+            raise commands.MissingPermissions(['send_messages'])
         embed = discord.Embed(
             title = title,
             description = description,
             color = 0xffe5ce
         )
-        if ctx.message.attachments != []:
-            embed.set_image(url = ctx.message.attachments[0].url)
-        await ctx.send(embed = embed)
+        if attachment:
+            embed.set_image(url = attachment.url)
+        message = await channel.send(embed = embed)
+        embed_col.insert_one({
+            'message': message.id,
+            'author': inter.user.id
+        })
+        await inter.response.send_message('Embed sent.', ephemeral = True)
     
-    @commands.command(name = 'edit-embed', hidden = True)
-    @commands.is_owner()
-    async def edit_embed(self, ctx, msg_id: int, title, desc, channel: discord.TextChannel = None):
+    @app_commands.command(
+        name = 'edit-embed',
+        description = 'Edits **YOUR** embed'
+    )
+    @app_commands.describe(
+        msg_id = "The message's ID to edit the embed",
+        title = "The embed's new title",
+        description = "The embed's new description",
+        attachment = 'A new attachment to put inside the embed',
+        channel = 'The channel to fetch the message from',
+    )
+    @app_commands.check(check)
+    async def edit_embed(self, inter, msg_id: int, title = None, description = None, attachment: discord.Asset = None, channel: discord.TextChannel = None):
         if channel == None:
-            channel = ctx.channel
+            channel = inter.channel
         message = await channel.fetch_message(msg_id)
-        if message.author != ctx.me or message.embeds == []: return
+        if message.author != inter.client.user:
+            raise commands.BadArgument('Not my message.')
+        if message.embeds == []:
+            raise discord.NotFound('No embed found.')
+        doc = embed_col.find_one({'message': msg_id})
+        if doc == None:
+            doc = {
+                'message': msg_id,
+                'author': self.bot.owner_id
+            }
+            embed_col.insert_one(doc)
+        if inter.user.id != doc['author']:
+            raise commands.CheckFailure('Not your embed.')
         
         embed = message.embeds[0]
-        embed.title = title
-        embed.description = desc
-        if ctx.message.attachments != []:
-            embed.set_image(url = ctx.message.attachments[0].url)
+        if title:
+            embed.title = title
+        if description:
+            embed.description = description
+        if attachment:
+            embed.set_image(url = attachment.url)
         await message.edit(embed = embed)
+        await inter.response.send_message('Embed edited.', ephemeral = True)
     
     @commands.Cog.listener()
     async def on_message_delete(self, message):
+        embed_col.delete_one({'message': message.id})
         if message.guild.id == None: return
         
         doc = snipe_col.find_one({'guild': message.guild.id})
@@ -74,7 +123,6 @@ class Utility(commands.Cog):
             }
             snipe_col.insert_one(doc)
         doc['channels'][str(message.channel.id)] = {
-            'attachment': None if message.attachments == [] else message.attachments[0].proxy_url,
             'content': message.content,
             'author': message.author.id,
             'created_at': message.created_at.timestamp(),
@@ -85,36 +133,36 @@ class Utility(commands.Cog):
             {'$set': {'channels': doc['channels']}}
         )
     
-    @commands.command()
-    async def snipe(self, ctx, channel: discord.TextChannel = None):
+    @app_commands.command(description = 'Shows the latest deleted message')
+    @app_commands.describe(channel = 'The channel to fetch the message from')
+    async def snipe(self, inter, channel: discord.TextChannel = None):
         if channel == None:
-            channel = ctx.channel
-        doc = snipe_col.find_one({'guild': ctx.guild.id})
+            channel = inter.channel
+        doc = snipe_col.find_one({'guild': inter.guild_id})
         if doc == None or str(channel.id) not in doc['channels']:
-            await ctx.reply('Nothing found.')
-        else:
-            fields = doc['channels'][str(channel.id)]
-            author = ctx.guild.get_member(fields['author'])
-            created_at = datetime.datetime.fromtimestamp(fields['created_at'])
-            try:
-                reference = await channel.fetch_message(fields['reference'])
-            except discord.HTTPException:
-                reference = None
-            
-            embed = discord.Embed(
-                description = fields['content'],
-                color = 0xffe5ce,
-                timestamp = created_at
-            )
-            if reference:
-                embed.description = f'> {(chr(10) + ">").join(reference.content.split())}{chr(10)}{reference.author.mention} ' + embed.description
-            if fields['attachment']:
-                embed.set_image(url = fields['attachment'])
-            embed.set_author(
-                name = str(author),
-                icon_url = author.display_avatar.url
-            )
-            await ctx.reply(embed = embed) 
+            raise commands.ChannelNotFound(channel)
+        
+        fields = doc['channels'][str(channel.id)]
+        author = self.bot.get_user(fields['author'])
+        created_at = datetime.datetime.fromtimestamp(fields['created_at'])
+        try:
+            reference = await channel.fetch_message(fields['reference'])
+        except discord.HTTPException:
+            reference = None
+        
+        embed = discord.Embed(
+            description = fields['content'],
+            color = 0xffe5ce,
+            timestamp = created_at
+        )
+        if reference:
+            embed.description = f'> {(chr(10) + "> ").join(reference.content.split())}\n{reference.author.mention} {embed.description}'
+        embed.set_author(
+            name = author,
+            url = f'https://discord.com/users/{author.id}',
+            icon_url = author.display_avatar.url
+        )
+        await inter.response.send_message(embed = embed)
 
 async def setup(bot): 
-    await bot.add_cog(Utility())
+    await bot.add_cog(Utility(bot))
