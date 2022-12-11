@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import *
+from typing import Union
 import pymongo
 import os
 
@@ -54,6 +54,9 @@ class Moderation(commands.Cog):
                     await member.add_roles(role)
                 elif type == 4: #drop
                     await member.remove_roles(role)
+                elif type == 5: #binding
+                    if not any(j in [i.id for i in member.roles] for j in rr[str(payload.message_id)].values()):
+                        await member.add_roles(role)
     
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
@@ -78,6 +81,8 @@ class Moderation(commands.Cog):
                 elif type == 3: #verify
                     pass
                 elif type == 4: #drop
+                    pass
+                elif type == 5: #binding
                     pass
     
     @commands.Cog.listener()
@@ -115,7 +120,8 @@ class Moderation(commands.Cog):
 Type 1: Unique
 Type 2: Reversed
 Type 3: Verify
-Type 4: Drop''',
+Type 4: Drop
+Type 5: Binding''',
         guild_only = True
     )
     
@@ -193,7 +199,7 @@ Type 4: Drop''',
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def edit(self, inter, msg_id, emoji: discord.PartialEmoji, change: Union[discord.Role, discord.PartialEmoji], channel: Union[discord.TextChannel] = None):
+    async def edit(self, inter, msg_id, emoji: discord.PartialEmoji, change: Union[discord.Role, discord.PartialEmoji], channel: discord.TextChannel = None):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -248,10 +254,11 @@ Type 4: Drop''',
 Type 1: Unique
 Type 2: Reversed
 Type 3: Verify
-Type 4: Drop'''
+Type 4: Drop
+Type 5: Binding'''
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def rr_type(self, inter, msg_id, type: app_commands.Range[int, 0, 4]):
+    async def rr_type(self, inter, msg_id, type: app_commands.Range[int, 0, 5]):
         doc = rr_col.find_one({'guild': inter.guild_id})
         if doc == None:
             doc = {
