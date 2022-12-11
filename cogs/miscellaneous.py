@@ -127,7 +127,7 @@ Version: {discord.__version__}''',
         channel = 'Where to post the poll',
         options = 'Separate options with a new line'
     )
-    async def poll(self, inter, title, options, channel: Optional[discord.TextChannel]):
+    async def poll(self, inter, title: str, options: str, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         options = options.split()[:10]
