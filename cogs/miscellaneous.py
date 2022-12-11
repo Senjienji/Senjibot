@@ -21,11 +21,11 @@ class Miscellaneous(commands.Cog):
     async def say(self, inter, content, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
-        if channel.permissions_for(inter.user).send_messages:
-            await channel.send('> ' + '\n> '.join(content.split()) + f'\n-{inter.user.mention}')
-            await inter.response.send_message('Message sent.', ephemeral = True)
-        else:
-            await inter.response.send_message('Missing `Send Messages` permission.', ephemeral = True)
+        if not channel.permissions_for(inter.user).send_messages:
+            raise commands.MissingPermissions(['send_messages'])
+        
+        await channel.send('> ' + '\n> '.join(content.split()) + f'\n-{inter.user.mention}')
+        await inter.response.send_message('Message sent.', ephemeral = True)
     
     @app_commands.command(description = 'Shows the information of Senjibot')
     async def bot(self, inter):
@@ -38,14 +38,14 @@ Uptime: {discord.utils.format_dt(self.bot.launch_time, "R")}
 Version: {discord.__version__}''',
             color = 0xffe5ce
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ))
     
     @app_commands.command(description = 'Shows the emoji image')
     @app_commands.describe(emoji = 'The emoji to show')
-    async def emoji(self, ctx, emoji: discord.Emoji):
+    async def emoji(self, inter, emoji: discord.Emoji):
         await inter.response.send_message(embed = discord.Embed(
             title = f'{emoji.name}.{"gif" if emoji.animated else "png"}',
             description = f'[Link]({emoji.url})',
@@ -53,7 +53,7 @@ Version: {discord.__version__}''',
         ).set_image(
             url = emoji.url
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
@@ -74,7 +74,7 @@ Version: {discord.__version__}''',
         ).set_image(
             url = user.display_avatar.url
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
@@ -91,7 +91,7 @@ Version: {discord.__version__}''',
         ).set_image(
             url = member.display_avatar.url
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
@@ -112,7 +112,7 @@ Version: {discord.__version__}''',
         ).set_image(
             url = guild.icon.url
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
@@ -127,25 +127,25 @@ Version: {discord.__version__}''',
         channel = 'Where to post the poll',
         options = 'Separate options with a new line'
     )
-    async def poll(self, inter, title, channel: Optional[discord.TextChannel], options):
+    async def poll(self, inter, title, options, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         options = options.split()[:10]
-        if channel.permissions_for(inter.user).send_messages:
-            message = await channel.send(embed = discord.Embed(
-                title = title,
-                description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options)),
-                color = 0xffe5ce
-            ).set_author(
-                name = str(inter.user),
-                url = 'https://discord.com/users/{inter.user.id}',
-                icon_url = inter.user.display_avatar.url
-            ))
-            for i in range(len(options)):
-                await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
-            await inter.response.send_message('Poll sent.', ephemeral = True)
-        else:
-            await inter.response.send_message('Missing `Send Messages` permission', ephemeral = True)
+        if not channel.permissions_for(inter.user).send_messages:
+            raise commands.MissingPermissions(['send_messages'])
+        
+        message = await channel.send(embed = discord.Embed(
+            title = title,
+            description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options)),
+            color = 0xffe5ce
+        ).set_author(
+            name = inter.user,
+            url = 'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
+        ))
+        for i in range(len(options)):
+            await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
+        await inter.response.send_message('Poll sent.', ephemeral = True)
 
 async def setup(bot):
     await bot.add_cog(Miscellaneous(bot))
