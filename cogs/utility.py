@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from typing import Optional
 import datetime
 import pymongo
 import os
@@ -51,7 +52,7 @@ class Utility(commands.Cog):
         attachment = 'An attachment to put inside the embed',
         channel = "The channel to send the embed at\nRequires the `Send Messages` permission in that channel'
     )
-    async def embed(self, inter, title, description, attachment: discord.Asset = None, channel: discord.TextChannel = None):
+    async def embed(self, inter, title, description, attachment: Optional[discord.Asset], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         if not channel.permissions_for(inter.user).send_messages:
@@ -82,7 +83,7 @@ class Utility(commands.Cog):
         channel = 'The channel to fetch the message from',
     )
     @app_commands.check(check)
-    async def edit_embed(self, inter, msg_id: int, title = None, description = None, attachment: discord.Asset = None, channel: discord.TextChannel = None):
+    async def edit_embed(self, inter, msg_id: int, title: Optional[str], description: Optional[str], attachment: Optional[discord.Asset], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(msg_id)
@@ -135,7 +136,7 @@ class Utility(commands.Cog):
     
     @app_commands.command(description = 'Shows the latest deleted message')
     @app_commands.describe(channel = 'The channel to fetch the message from')
-    async def snipe(self, inter, channel: discord.TextChannel = None):
+    async def snipe(self, inter, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         doc = snipe_col.find_one({'guild': inter.guild_id})
