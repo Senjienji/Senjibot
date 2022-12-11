@@ -50,7 +50,7 @@ class Utility(commands.Cog):
         title = "The embed's title",
         description = "The embed's description",
         attachment = 'An attachment to put inside the embed',
-        channel = "The channel to send the embed at\nRequires the `Send Messages` permission in that channel'
+        channel = 'The channel to send the embed at\nRequires the `Send Messages` permission in that channel'
     )
     async def embed(self, inter, title, description, attachment: Optional[discord.Asset], channel: Optional[discord.TextChannel]):
         if channel == None:
