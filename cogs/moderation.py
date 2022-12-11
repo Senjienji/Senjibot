@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import Union
+from typing import Optional, Union
 import pymongo
 import os
 
@@ -141,6 +141,10 @@ Type 5: Binding''',
             title = 'Reaction Roles',
             description = 'None',
             color = 0xffe5ce
+        ).set_author(
+            name = inter.user,
+            url = f'https://discord.com/users/{inter.user.id}',
+            icon_url = inter.user.display_avatar.url
         )
         for msg_id, rr in doc['reaction_roles'].items():
             if len(rr) > 1:
@@ -159,7 +163,7 @@ Type 5: Binding''',
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def add(self, inter, msg_id, emoji: discord.PartialEmoji, role: discord.Role, channel: Optional[discord.TextChannel] = None):
+    async def add(self, inter, msg_id, emoji: discord.PartialEmoji, role: discord.Role, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -199,7 +203,7 @@ Type 5: Binding''',
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def edit(self, inter, msg_id, emoji: discord.PartialEmoji, change: Union[discord.Role, discord.PartialEmoji], channel: discord.TextChannel = None):
+    async def edit(self, inter, msg_id, emoji: discord.PartialEmoji, change: Union[discord.Role, discord.PartialEmoji], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -284,7 +288,7 @@ Type 5: Binding'''
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def remove(self, inter, msg_id, emoji: discord.PartialEmoji, channel: Optional[discord.TextChannel] = None):
+    async def remove(self, inter, msg_id, emoji: discord.PartialEmoji, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -321,7 +325,7 @@ Type 5: Binding'''
     )
     @app_commands.describe(msg_id = "The message's ID to purge")
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def rr_purge(self, inter, msg_id: Optional[str] = None):
+    async def rr_purge(self, inter, msg_id: Optional[str]):
         doc = rr_col.find_one({'guild': inter.guild_id})
         if doc == None:
             doc = {
@@ -353,7 +357,7 @@ Type 5: Binding'''
         channel = "The channel to fetch the new message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def move(self, inter, old_msg, new_msg, channel: Optional[discord.TextChannel] = None):
+    async def move(self, inter, old_msg, new_msg, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(new_msg))
