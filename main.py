@@ -1,5 +1,7 @@
 import discord
 from discord.ext import commands
+from typing import Optional
+import datetime
 import pymongo
 import random
 import time
@@ -10,36 +12,30 @@ client = pymongo.MongoClient(
     server_api = pymongo.server_api.ServerApi('1'),
 )
 db = client.senjibot
-prefix_col = db.prefix
 
-class MinimalHelpCommand(commands.MinimalHelpCommand):
-    async def send_pages(self):
-        await self.context.reply(embed = discord.Embed(
+class HelpCommand(commands.HelpCommand):
+    async def send_bot_help(self, mapping):
+        embed = discord.Embed(
             title = 'Help',
-            description = self.paginator.pages[0],
             color = 0xffe5ce
-        ).set_footer(
-            text = self.context.author.display_name,
+        ).set_author(
+            name = self.context.author,
+            url = f'https://discord.com/users/{self.context.author.id}',
             icon_url = self.context.author.display_avatar.url
-        ))
-
-def get_prefix(bot, message):
-    if message.guild == None:
-        return 's!'
-    doc = prefix_col.find_one({'guild': message.guild.id})
-    if doc == None:
-        doc = {
-            'guild': message.guild.id,
-            'prefix': 's!'
-        }
-        prefix_col.insert_one(doc)
-    return doc['prefix']
+        )
+        for cog, commands in mapping.items():
+            embed.add_field(
+                name = getattr(cog, 'qualified_name', 'No Category'),
+                value = '\n'.join(i.signature for i in commands),
+                inline = False
+            )
+        await self.context.reply(embed = embed)
 
 bot = commands.Bot(
-    command_prefix = get_prefix,
+    command_prefix = 's!',
     activity = discord.Game('Python'),
     owner_id = 902371374033670224,
-    help_command = MinimalHelpCommand(verify_checks = False),
+    help_command = HelpCommand(),
     allowed_mentions = discord.AllowedMentions(
         everyone = False,
         roles = False,
@@ -61,33 +57,25 @@ async def before_invoke(ctx):
 
 @bot.event
 async def on_connect():
-    print('Connected')
     for extension in os.listdir('./cogs'):
         if extension.endswith('.py'):
             await bot.load_extension(f'cogs.{extension[:-3]}')
+    print('Connected')
 
 @bot.event
 async def on_ready():
-    bot.launch_time = __import__('datetime').datetime.today()
+    bot.launch_time = datetime.datetime.today()
     print('Ready')
-    #await bot.get_user(bot.owner_id).send(f'Online since {discord.utils.format_dt(bot.launch_time, "d")} {discord.utils.format_dt(bot.launch_time, "T")}')
 
 @bot.event
 async def on_command_error(ctx, error):
-    print(f'{str(type(error))[8:-2]}: {error}')
-    content = str(error)
-    if isinstance(error, commands.CommandOnCooldown):
-        content = f'You are on cooldown. Try again {discord.utils.format_dt(__import__("datetime").datetime.fromtimestamp(time.time() + error.retry_after), "R")}'
-    elif isinstance(error, commands.MissingRequiredArgument):
-        return await ctx.send_help(ctx.command)
-    elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)):
-        return
-    try:
-        await ctx.reply(content)
-    except discord.HTTPException:
-        await ctx.send(f'{ctx.author.mention} {content}')
-    except discord.Forbidden:
-        pass
+    await ctx.reply(str(error))
+    raise error
+
+@bot.tree.error
+async def on_app_command_error(inter, error):
+    await inter.response.send_message(str(error), ephemeral = True)
+    raise error
 
 @bot.event
 async def on_guild_join(guild):
@@ -99,7 +87,7 @@ async def on_guild_remove(guild):
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def doc(ctx, *, query=None):
+async def doc(ctx, *, Optional[query]):
     if query == None:
         await ctx.reply('https://discordpy.readthedocs.io/en/latest/api.html')
     else:
@@ -109,7 +97,7 @@ async def doc(ctx, *, query=None):
 @commands.is_owner()
 async def execute(ctx, *, content):
     exec(content)
-    await ctx.message.add_reaction('✅')
+    await ctx.message.add_reaction('\U00002705')
 
 @bot.command(name = 'eval', hidden = True)
 @commands.is_owner()
@@ -117,8 +105,9 @@ async def evaluate(ctx, *, content):
     embed = discord.Embed(
         title = 'Evaluation',
         color = 0xffe5ce
-    ).set_footer(
-        text = ctx.author.display_name,
+    ).set_author(
+        name = ctx.author,
+        url = 
         icon_url = ctx.author.display_avatar.url
     )
     if content.startswith('await '):
