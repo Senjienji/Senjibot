@@ -189,6 +189,7 @@ Type 5: Binding''',
             {'$set': {'reaction_roles': rr}}
         )
         reaction = discord.utils.get(message.reactions, emoji = emoji)
+        if reaction != None:
             async for user in reaction.users():
                 if isinstance(user, discord.Member):
                     await user.add_roles(role)
