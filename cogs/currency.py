@@ -1,7 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
-from typing import *
+from typing import Union, Literal, Optional
 import pymongo
 import random
 import os
@@ -21,7 +21,7 @@ class Currency(commands.Cog):
     
     @app_commands.command(description = "Shows your (or someone else's) balance")
     @app_commands.describe(member = 'The member to choose (must not be a bot)')
-    async def balance(self, inter, member: Optional[discord.Member] = None):
+    async def balance(self, inter, member: Optional[discord.Member]):
         if member == None:
             member = inter.user
         if member.bot:
@@ -102,7 +102,7 @@ class Currency(commands.Cog):
     
     @app_commands.command(description = 'Deposit your money into the bank\nLimit is $1000 per bank account')
     @app_commands.describe(amount = 'The amount of money to deposit')
-    async def deposit(self, inter, amount: Union[int, 'all']):
+    async def deposit(self, inter, amount: Literal[int, 'all']):
         doc = currency_col.find_one({'user': inter.user.id})
         if doc == None:
             doc = {
@@ -131,7 +131,7 @@ class Currency(commands.Cog):
     
     @app_commands.command(description = 'Withdraw money from the bank')
     @app_commands.describe(amount = 'The amount of money to withdraw')
-    async def withdraw(self, inter, amount: Union[int, 'all']):
+    async def withdraw(self, inter, amount: Literal[int, 'all']):
         doc = currency_col.find_one({'user': inter.user.id})
         if doc == None:
             doc = {
@@ -183,7 +183,7 @@ class Currency(commands.Cog):
     )
     @app_commands.guild_only()
     @app_commands.checks.cooldown(1, 1 * 60 * 60, key = lambda i: i.user.id)
-    async def give(self, ctx, member: discord.Member, amount: Union[int, 'all']):
+    async def give(self, ctx, member: discord.Member, amount: Literal[int, 'all']):
         doc = currency_col.find_one({'user': inter.user.id})
         if doc == None:
             doc = {
@@ -283,14 +283,9 @@ class Currency(commands.Cog):
     def check(self, inter: discord.Interaction):
         return inter.user.id == self.bot.owner_id
     
-    @app_commands.command(description = 'This command is owner only.')
-    @app_commands.describe(
-        member = 'The member to set their balance',
-        type = 'Accepts "wallet" and "bank"',
-        amount = 'The amount to set their balance to'
-    )
-    @app_commands.check(check)
-    async def set(self, inter, member: discord.Member, type: Union['wallet', 'bank'], amount: int):
+    @commands.command(hidden = True)
+    @commands.is_owner()
+    async def set(self, ctx, member: discord.Member, type: Literal['wallet', 'bank'], amount: int):
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
             doc = {
