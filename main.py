@@ -62,8 +62,8 @@ async def on_connect():
     for extension in os.listdir('./cogs'):
         if extension.endswith('.py'):
             await bot.load_extension(f'cogs.{extension[:-3]}')
-    await bot.tree.copy_global_to(guild = bot.test_guild)
-    await bot.tree.sync(guild = bot.test_guild)
+    #await bot.tree.copy_global_to(guild = bot.test_guild)
+    #await bot.tree.sync(guild = bot.test_guild)
     print('Connected')
 
 @bot.event
