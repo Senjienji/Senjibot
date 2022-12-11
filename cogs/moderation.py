@@ -163,7 +163,7 @@ Type 5: Binding''',
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def add(self, inter, msg_id, emoji: discord.PartialEmoji, role: discord.Role, channel: Optional[discord.TextChannel]):
+    async def add(self, inter, msg_id: str, emoji: discord.PartialEmoji, role: discord.Role, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -203,7 +203,7 @@ Type 5: Binding''',
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def edit(self, inter, msg_id, emoji: discord.PartialEmoji, change: Union[discord.Role, discord.PartialEmoji], channel: Optional[discord.TextChannel]):
+    async def edit(self, inter, msg_id: str, emoji: discord.PartialEmoji, change: Union[discord.Role, discord.PartialEmoji], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -262,7 +262,7 @@ Type 4: Drop
 Type 5: Binding'''
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def rr_type(self, inter, msg_id, type: app_commands.Range[int, 0, 5]):
+    async def rr_type(self, inter, msg_id: str, type: app_commands.Range[int, 0, 5]):
         doc = rr_col.find_one({'guild': inter.guild_id})
         if doc == None:
             doc = {
@@ -288,7 +288,7 @@ Type 5: Binding'''
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def remove(self, inter, msg_id, emoji: discord.PartialEmoji, channel: Optional[discord.TextChannel]):
+    async def remove(self, inter, msg_id: str, emoji: discord.PartialEmoji, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -357,7 +357,7 @@ Type 5: Binding'''
         channel = "The channel to fetch the new message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def move(self, inter, old_msg, new_msg, channel: Optional[discord.TextChannel]):
+    async def move(self, inter, old_msg: str, new_msg: str, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(new_msg))
