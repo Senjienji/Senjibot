@@ -3,8 +3,6 @@ from discord.ext import commands
 from typing import Optional
 import datetime
 import pymongo
-import random
-import time
 import os
 
 client = pymongo.MongoClient(
