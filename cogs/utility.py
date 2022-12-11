@@ -57,6 +57,7 @@ class Utility(commands.Cog):
             channel = inter.channel
         if not channel.permissions_for(inter.user).send_messages:
             raise commands.MissingPermissions(['send_messages'])
+        
         embed = discord.Embed(
             title = title,
             description = description,
@@ -82,7 +83,6 @@ class Utility(commands.Cog):
         attachment = 'A new attachment to put inside the embed',
         channel = 'The channel to fetch the message from',
     )
-    @app_commands.check(check)
     async def edit_embed(self, inter, msg_id: int, title: Optional[str], description: Optional[str], attachment: Optional[discord.Asset], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
@@ -90,7 +90,8 @@ class Utility(commands.Cog):
         if message.author != inter.client.user:
             raise commands.BadArgument('Not my message.')
         if message.embeds == []:
-            raise discord.NotFound('No embed found.')
+            raise commands.BadArgument('Embed not found.')
+        
         doc = embed_col.find_one({'message': msg_id})
         if doc == None:
             doc = {
