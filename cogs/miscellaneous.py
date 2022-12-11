@@ -1,6 +1,7 @@
 import discord
 from discord import app_commands
 from discord.ext import commands
+from typing import Optional
 import os
 
 class Miscellaneous(commands.Cog):
@@ -17,7 +18,7 @@ class Miscellaneous(commands.Cog):
        content = 'The text to send',
        channel = 'Where to send the text'
     )
-    async def say(self, inter, content, channel: discord.TextChannel = None):
+    async def say(self, inter, content, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         if channel.permissions_for(inter.user).send_messages:
@@ -63,7 +64,7 @@ Version: {discord.__version__}''',
 
     @app_commands.command(description = "Shows an user's avatar")
     @app_commands.describe(user = 'The user to show')
-    async def avatar(self, inter, user: discord.User = None):
+    async def avatar(self, inter, user: Optional[discord.User]):
         if user == None:
             user = inter.user
         await inter.response.send_message(embed = discord.Embed(
@@ -101,7 +102,7 @@ Version: {discord.__version__}''',
     
     @app_commands.command(description = 'Shows the icon of a server')
     @app_commands.describe(server = 'The server to show')
-    async def icon(self, inter, server: discord.Guild = None):
+    async def icon(self, inter, server: Optional[discord.Guild]):
         if server == None:
             server = inter.guild
         await inter.response.send_message(embed = discord.Embed(
@@ -126,7 +127,7 @@ Version: {discord.__version__}''',
         channel = 'Where to post the poll',
         options = 'Separate options with a new line'
     )
-    async def poll(self, inter, title, channel: discord.TextChannel = None, options):
+    async def poll(self, inter, title, channel: Optional[discord.TextChannel], options):
         if channel == None:
             channel = inter.channel
         options = options.split()[:10]
