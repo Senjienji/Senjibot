@@ -47,6 +47,10 @@ bot = commands.Bot(
         emojis = True
     )
 )
+bot.test_guild = discord.Object(
+    809722018953166858,
+    type = discord.Guild
+)
 
 @bot.before_invoke
 async def before_invoke(ctx):
@@ -58,6 +62,8 @@ async def on_connect():
     for extension in os.listdir('./cogs'):
         if extension.endswith('.py'):
             await bot.load_extension(f'cogs.{extension[:-3]}')
+    await bot.tree.copy_global_to(guild = bot.test_guild)
+    await bot.tree.sync(guild = bot.test_guild)
     print('Connected')
 
 @bot.event
