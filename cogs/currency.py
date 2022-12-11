@@ -350,7 +350,7 @@ class Currency(commands.Cog):
         price = 'How much it costs (must not be below 0)'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def add(self, inter, name, price: int):
+    async def add(self, inter, name: str, price: int):
         doc = shop_col.find_one({'guild': inter.guild_id})
         if doc == None:
             doc = {
@@ -377,7 +377,7 @@ class Currency(commands.Cog):
         change = 'The new name **OR** the modified price'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def edit(self, inter, name, change: Union[str, int]):
+    async def edit(self, inter, name: str, change: Union[str, int]):
         doc = shop_col.find_one({'guild': inter.guild_id})
         if doc == None:
             doc = {
@@ -408,7 +408,7 @@ class Currency(commands.Cog):
     @shop.command(description = 'Removes an item from the shop')
     @app_commands.describe(name = 'The name of the item')
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def remove(self, inter, name):
+    async def remove(self, inter, name: str):
         doc = shop_col.find_one({'guild': inter.guild_id})
         if doc == None:
             doc = {
