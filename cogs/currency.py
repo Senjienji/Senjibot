@@ -39,7 +39,7 @@ class Currency(commands.Cog):
             description = f'Wallet: ${wallet}\nBank: ${bank} / $1000',
             color = 0xffe5ce
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ))
@@ -69,7 +69,7 @@ class Currency(commands.Cog):
             title = 'Leaderboard',
             color = 0xffe5ce
         ).set_author(
-            name = inter.user.display_name,
+            name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         )
