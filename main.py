@@ -85,7 +85,7 @@ async def on_guild_remove(guild):
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def doc(ctx, *, query: Optional[str]):
+async def doc(ctx, *, Optional[query]):
     if query == None:
         await ctx.reply('https://discordpy.readthedocs.io/en/latest/api.html')
     else:
@@ -105,7 +105,7 @@ async def evaluate(ctx, *, content):
         color = 0xffe5ce
     ).set_author(
         name = ctx.author,
-        url = 
+        url = f'https://discord.com/users/{ctx.author.id}',
         icon_url = ctx.author.display_avatar.url
     )
     if content.startswith('await '):
