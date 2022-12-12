@@ -75,7 +75,7 @@ async def on_ready():
 
 @bot.event
 async def on_command_error(ctx, error):
-    print(f'{str(type(error))[8:-2]}: {error}')
+    ctx.command.reset_cooldown(ctx)
     content = str(error)
     if isinstance(error, commands.CommandOnCooldown):
         content = f'You are on cooldown. Try again {discord.utils.format_dt(datetime.datetime.fromtimestamp(time.time() + error.retry_after), "R")}'
@@ -89,6 +89,7 @@ async def on_command_error(ctx, error):
         await ctx.send(f'{ctx.author.mention} {content}')
     except discord.Forbidden:
         pass
+    raise error
 
 @bot.event
 async def on_guild_join(guild):
@@ -110,7 +111,7 @@ async def doc(ctx, *, query: Optional[str]):
 @commands.is_owner()
 async def execute(ctx, *, content):
     exec(content)
-    await ctx.message.add_reaction('✅')
+    await ctx.message.add_reaction('\U00002705')
 
 @bot.command(name = 'eval', hidden = True)
 @commands.is_owner()
