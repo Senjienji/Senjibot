@@ -167,7 +167,7 @@ class Currency(commands.Cog):
         await ctx.reply(f'You got ${gain}!')
     
     @commands.command(cooldown_after_parsing = True)
-    @commands.cooldown(rate = 1, per = 24 * 60 * 60, type = commands.BucketType.user):
+    @commands.cooldown(rate = 1, per = 24 * 60 * 60, type = commands.BucketType.user)
     async def daily(self, ctx):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
