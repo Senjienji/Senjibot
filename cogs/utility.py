@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-from typing import
+from typing import Optional
 import pymongo
 import os
 
