@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import datetime
+from typing import
 import pymongo
 import os
 
@@ -10,6 +10,7 @@ client = pymongo.MongoClient(
 )
 db = client.senjibot
 snipe_col = db.snipe
+embed_col = db.embed
 
 class Utility(commands.Cog):
     @commands.command()
@@ -31,39 +32,66 @@ class Utility(commands.Cog):
                 'open'
             )}))),
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ))
     
     @commands.command()
-    async def embed(self, ctx, title, *, description):
+    async def embed(self, ctx, channel: Optional[discord.TextChannel], title, description, attachment: Optional[discord.Attachment]):
+        if channel == None:
+            channel = ctx.channel
+        if not channel.permissions_for(ctx.author).send_messages:
+            raise commands.MissingPermissions(['send_messages'])
+        
         embed = discord.Embed(
             title = title,
             description = description,
             color = 0xffe5ce
         )
-        if ctx.message.attachments != []:
-            embed.set_image(url = ctx.message.attachments[0].url)
-        await ctx.send(embed = embed)
+        if attachment:
+            embed.set_image(url = attachment.url)
+        message = await channel.send(embed = embed)
+        embed_col.insert_one({
+            'message': message.id,
+            'author': ctx.author.id
+        })
+        await ctx.reply('Embed sent.')
     
-    @commands.command(name = 'edit-embed', hidden = True)
-    @commands.is_owner()
-    async def edit_embed(self, ctx, msg_id: int, title, desc, channel: discord.TextChannel = None):
+    @commands.command()
+    async def edit_embed(self, ctx, msg_id: int, channel: Optional[discord.TextChannel], title: Optional[str], description: Optional[str], attachment: Optional[discord.Attachment]):
         if channel == None:
             channel = ctx.channel
         message = await channel.fetch_message(msg_id)
-        if message.author != ctx.me or message.embeds == []: return
+        if message.author != ctx.me:
+            raise commands.BadArgument('Not my message.')
+        if message.embeds == []:
+            raise commands.BadArgument('Embed not found.')
+        
+        doc = embed_col.find_one({'message': msg_id})
+        if doc == None:
+            doc = {
+                'message': msg_id,
+                'author': ctx.bot.owner_id
+            }
+            embed_col.insert_one(doc)
+        if ctx.author.id not in (ctx.bot.owner_id, doc['author']):
+            raise commands.CheckFailure('Not your embed.')
         
         embed = message.embeds[0]
-        embed.title = title
-        embed.description = desc
-        if ctx.message.attachments != []:
-            embed.set_image(url = ctx.message.attachments[0].url)
+        if title:
+            embed.title = title
+        if description:
+            embed.description = description
+        if attachment:
+            embed.set_image(url = attachment.url)
         await message.edit(embed = embed)
+        await ctx.reply('Embed edited.')
     
     @commands.Cog.listener()
     async def on_message_delete(self, message):
+        embed_col.delete_one({'message': message.id})
         if message.guild.id == None: return
         
         doc = snipe_col.find_one({'guild': message.guild.id})
@@ -74,7 +102,6 @@ class Utility(commands.Cog):
             }
             snipe_col.insert_one(doc)
         doc['channels'][str(message.channel.id)] = {
-            'attachment': None if message.attachments == [] else message.attachments[0].proxy_url,
             'content': message.content,
             'author': message.author.id,
             'created_at': message.created_at.timestamp(),
@@ -91,30 +118,27 @@ class Utility(commands.Cog):
             channel = ctx.channel
         doc = snipe_col.find_one({'guild': ctx.guild.id})
         if doc == None or str(channel.id) not in doc['channels']:
-            await ctx.reply('Nothing found.')
-        else:
-            fields = doc['channels'][str(channel.id)]
-            author = ctx.guild.get_member(fields['author'])
-            created_at = datetime.datetime.fromtimestamp(fields['created_at'])
-            try:
-                reference = await channel.fetch_message(fields['reference'])
-            except discord.HTTPException:
-                reference = None
-            
-            embed = discord.Embed(
-                description = fields['content'],
-                color = 0xffe5ce,
-                timestamp = created_at
-            )
-            if reference:
-                embed.description = f'> {(chr(10) + ">").join(reference.content.split())}{chr(10)}{reference.author.mention} ' + embed.description
-            if fields['attachment']:
-                embed.set_image(url = fields['attachment'])
-            embed.set_author(
-                name = str(author),
-                icon_url = author.display_avatar.url
-            )
-            await ctx.reply(embed = embed) 
+            raise Exception('Message not found.')
+        
+        fields = doc['channels'][str(channel.id)]
+        author = ctx.guild.get_member(fields['author'])
+        try:
+            reference = await channel.fetch_message(fields['reference'])
+        except discord.HTTPException:
+            reference = None
+        
+        embed = discord.Embed(
+            description = fields['content'],
+            color = 0xffe5ce,
+            timestamp = datetime.datetime.fromtimestamp(fields['created_at'])
+        ).set_author(
+            name = author,
+            url = f'https://discord.com/users/{author.id}',
+            icon_url = author.display_avatar.url
+        )
+        if reference:
+            embed.description = '> ' + '\n> '.join(reference.content.split()) + f'\n{reference.author.mention} {embed.description}'
+        await ctx.reply(embed = embed) 
 
 async def setup(bot): 
     await bot.add_cog(Utility())
