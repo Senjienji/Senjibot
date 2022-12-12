@@ -101,24 +101,21 @@ Version: {discord.__version__}''',
             style = discord.ButtonStyle.link
         )))
     
-    @app_commands.command(description = 'Shows the icon of a server')
-    @app_commands.describe(server = 'The server to show')
-    async def icon(self, inter, server: Optional[discord.Guild]):
-        if server == None:
-            server = inter.guild
+    @app_commands.command(description = 'Shows the icon of this server')
+    async def icon(self, inter):
         await inter.response.send_message(embed = discord.Embed(
-            title = f'{guild.name}.{"gif" if guild.icon.is_animated() else "png"}',
-            description = f'[Link][{guild.icon.url}]',
+            title = f'{inter.guild.name}.{"gif" if inter.guild.icon.is_animated() else "png"}',
+            description = f'[Link][{inter.guild.icon.url}]',
             color = 0xffe5ce
         ).set_image(
-            url = guild.icon.url
+            url = inter.guild.icon.url
         ).set_author(
             name = inter.user,
             url = f'https://discord.com/users/{inter.user.id}',
             icon_url = inter.user.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
-            url = guild.icon.url,
+            url = inter.guild.icon.url,
             style = discord.ButtonStyle.link
         )))
     
