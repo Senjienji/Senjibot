@@ -45,7 +45,7 @@ Version: {discord.__version__}''',
     
     @app_commands.command(description = 'Shows the emoji image')
     @app_commands.describe(emoji = 'The emoji to show')
-    async def emoji(self, inter, emoji: discord.Emoji):
+    async def emoji(self, inter, emoji: discord.PartialEmoji):
         await inter.response.send_message(embed = discord.Embed(
             title = f'{emoji.name}.{"gif" if emoji.animated else "png"}',
             description = f'[Link]({emoji.url})',
