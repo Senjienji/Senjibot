@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from typing import Optional, Union, Literal
 import pymongo
 import random
 import os
@@ -14,11 +15,12 @@ shop_col = db.shop
 
 class Currency(commands.Cog):
     @commands.command(aliases = ['bal'])
-    async def balance(self, ctx, *, member: discord.Member = None):
+    async def balance(self, ctx, *, member: Optional[discord.Member]):
         if member == None:
             member = ctx.author
         if member.bot:
-            return await ctx.reply('No')
+            raise commands.BadArgument('`member` must not be a bot.')
+        
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
             doc = {
@@ -31,8 +33,9 @@ class Currency(commands.Cog):
             title = f"{member.display_name}'s Balance",
             description = f'Wallet: ${wallet}\nBank: ${bank} / $1000',
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ))
     
@@ -56,44 +59,43 @@ class Currency(commands.Cog):
                 start = 1
             )
         )
-        global page
-        page = 0
         embed = discord.Embed(
             title = 'Leaderboard',
-            description = '\n'.join(paginator[page:page + 10]),
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         )
         
         class Leaderboard(discord.ui.View):
+            page = 0
+            embed.description = '\n'.join(paginator[page:page + 10])
+            
             @discord.ui.button(label = '', emoji = '⬅️', disabled = page == 0)
             async def previous(self, inter, button):
-                if inter.user == ctx.author:
-                    global page
-                    page -= 10
-                    button.disabled = page == 0
-                    embed.description = "\n".join(paginator[page:page + 10])
-                    await inter.response.edit_message(embed = embed, view = self)
-                else:
-                    await inter.response.send_message('This button is not for you.', ephemeral = True)
+                if inter.user != ctx.author:
+                    raise commands.CheckFailure('This button is not for you.')
+                
+                page -= 10
+                button.disabled = page == 0
+                embed.description = '\n'.join(paginator[page:page + 10])
+                await inter.response.edit_message(embed = embed, view = self)
             
             @discord.ui.button(label = '', emoji = '➡️', disabled = page == len(paginator) // 10 * 10)
             async def next(self, inter, button):
-                if inter.user == ctx.author:
-                    global page
-                    page += 10
-                    button.disabled = page == len(paginator) // 10 * 10
-                    embed.description = "\n".join(paginator[page:page + 10])
-                    await inter.response.edit_message(embed = embed, view = self)
-                else:
-                    await inter.response.send_message('This button is not for you.', ephemeral = True)
+                if inter.user != ctx.author:
+                    raise commands.CheckFailure('This button is not for you.')
+                
+                page += 10
+                button.disabled = page == len(paginator) // 10 * 10
+                embed.description = '\n'.join(paginator[page:page + 10])
+                await inter.response.edit_message(embed = embed, view = self)
         
         await ctx.reply(embed = embed, view = Leaderboard())
     
     @commands.command(aliases = ['dep'])
-    async def deposit(self, ctx, amount):
+    async def deposit(self, ctx, amount: Literal[int, 'all']):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -103,27 +105,24 @@ class Currency(commands.Cog):
             currency_col.insert_one(doc)
         bal = doc['balance']
         wallet, bank = bal
-        if amount.lower() == 'all':
+        if amount == 'all':
             amount = wallet
-        else:
-            amount = int(amount)
         amount = min(amount, 1000 - bank)
-        if amount > 0:
-            if wallet >= amount:
-                bal[0] -= amount
-                bal[1] += amount
-                currency_col.update_one(
-                    {'user': ctx.author.id},
-                    {'$set': {'balance': bal}}
-                )
-                await ctx.reply(f'${amount} deposited.')
-            else:
-                await ctx.reply(f"You're ${amount - wallet} short.")
-        else:
-            await ctx.reply('amount must be greater than 0.')
+        if amount <= 0:
+            raise commands.BadArgument('`amount` must be greater than 0.')
+        if wallet < amount:
+            raise Exception(f"You're ${amount - wallet} short.")
+        
+        bal[0] -= amount
+        bal[1] += amount
+        currency_col.update_one(
+            {'user': ctx.author.id},
+            {'$set': {'balance': bal}}
+        )
+        await ctx.reply(f'${amount} deposited.')
     
     @commands.command(aliases = ['with'])
-    async def withdraw(self, ctx, amount):
+    async def withdraw(self, ctx, amount: Literal[int, 'all']):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -133,23 +132,20 @@ class Currency(commands.Cog):
             currency_col.insert_one(doc)
         bal = doc['balance']
         bank = bal[1]
-        if amount.lower() == 'all':
+        if amount == 'all':
             amount = bank
-        else:
-            amount = int(amount)
-        if amount > 0:
-            if bank >= amount:
-                bal[0] += amount
-                bal[1] -= amount
-                currency_col.update_one(
-                    {'user': ctx.author.id},
-                    {'$set': {'balance': bal}}
-                )
-                await ctx.reply(f'${amount} withdrawn.')
-            else:
-                await ctx.reply(f"You're ${amount - bank} short.")
-        else:
-            await ctx.reply('amount must be greater than 0.')
+        if amount <= 0:
+            raise commands.BadArgument('`amount` must be greater than 0.')
+        if bank < amount:
+            raise Exception(f"You're ${amount - bank} short.")
+        
+        bal[0] += amount
+        bal[1] -= amount
+        currency_col.update_one(
+            {'user': ctx.author.id},
+            {'$set': {'balance': bal}}
+        )
+        await ctx.reply(f'${amount} withdrawn.')
     
     @commands.command(cooldown_after_parsing = True)
     @commands.cooldown(rate = 1, per = 30 * 60, type = commands.BucketType.user)
@@ -173,7 +169,7 @@ class Currency(commands.Cog):
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
     @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
-    async def give(self, ctx, member: discord.Member, amount: int):
+    async def give(self, ctx, member: discord.Member, amount: Literal[int, 'all']):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -182,9 +178,11 @@ class Currency(commands.Cog):
             }
             currency_col.insert_one(doc)
         author_bal = doc['balance']
-        if member == ctx.author or member.bot:
-            await ctx.reply('No')
-            return ctx.command.reset_cooldown(ctx)
+        if member == ctx.author:
+            raise commands.BadArgument("You shouldn't give yourself money.")
+        if member.bot
+            raise commands.BadArgument('`member` must not be a bot.')
+        
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
             doc = {
@@ -194,25 +192,24 @@ class Currency(commands.Cog):
             currency_col.insert_one(doc)
         member_bal = doc['balance']
         wallet = author_bal[0]
-        if amount > 0:
-            if wallet >= amount:
-                author_bal[0] -= amount
-                member_bal[0] += amount
-                currency_col.update_one(
-                    {'user': ctx.author.id},
-                    {'$set': {'balance': author_bal}}
-                )
-                currency_col.update_one(
-                    {'user': member.id},
-                    {'$set': {'balance': member_bal}}
-                )
-                await ctx.reply(f'You gave ${amount} to `{member}`.')
-            else:
-                await ctx.reply(f"You're ${amount - wallet} short.")
-                ctx.command.reset_cooldown(ctx)
-        else:
-            await ctx.reply('amount must be greater than 0.')
-            ctx.command.reset_cooldown(ctx)
+        if amount == 'all':
+            amount = wallet
+        if amount <= 0:
+            raise commands.BadArgument('`amount` must be greater than 0.')
+        if wallet < amount:
+            raise Exception(f"You're ${amount - wallet} short.")
+        
+        author_bal[0] -= amount
+        member_bal[0] += amount
+        currency_col.update_one(
+            {'user': ctx.author.id},
+            {'$set': {'balance': author_bal}}
+        )
+        currency_col.update_one(
+            {'user': member.id},
+            {'$set': {'balance': member_bal}}
+        )
+        await ctx.reply(f'You gave ${amount} to `{member}`.')
     
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
@@ -226,9 +223,11 @@ class Currency(commands.Cog):
             }
             currency_col.insert_one(doc)
         author_bal = doc['balance']
-        if member == ctx.author or member.bot:
-            await ctx.reply('No')
-            return ctx.command.reset_cooldown(ctx)
+        if member == ctx.author:
+            raise commands.BadArgument("You shouldn't rob yourself.")
+        if member.bot:
+            raise commands.BadArgument('`member` must not be a bot.')
+        
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
             doc = {
@@ -239,39 +238,37 @@ class Currency(commands.Cog):
         member_bal = doc['balance']
         wallet1 = author_bal[0]
         wallet2 = member_bal[0]
-        if wallet1 >= 20:
-            if wallet2 >= 20:
-                if random.randint(0, 100) < 50:
-                    amount = random.randint(20, max(wallet2 // 3, 20))
-                    author_bal[0] += amount
-                    member_bal[0] -= amount
-                    currency_col.update_one(
-                        {'user': ctx.author.id},
-                        {'$set': {'balance': author_bal}}
-                    )
-                    currency_col.update_one(
-                        {'user': member.id},
-                        {'$set': {'balance': member_bal}}
-                    )
-                    await ctx.reply(f'You stole ${amount} from `{member}`.')
-                else:
-                    amount = random.randint(20, max(wallet1 // 3, 20))
-                    author_bal[0] -= amount
-                    currency_col.update_one(
-                        {'user': ctx.author.id},
-                        {'$set': {'balance': author_bal}}
-                    )
-                    await ctx.reply(f'You got caught and lost ${amount}.')
-            else:
-                await ctx.reply('Your target has less than $20.')
-                ctx.command.reset_cooldown(ctx)
+        if wallet1 < 20:
+            raise Exception('You need at least $20 to rob someone.')
+        if wallet2 < 20:
+            raise Exception('Your target has less than $20.')
+        
+        if random.randint(0, 100) < 50:
+            amount = random.randint(20, max(wallet2 // 3, 20))
+            author_bal[0] += amount
+            member_bal[0] -= amount
+            currency_col.update_one(
+                {'user': ctx.author.id},
+                {'$set': {'balance': author_bal}}
+            )
+            currency_col.update_one(
+                {'user': member.id},
+                {'$set': {'balance': member_bal}}
+            )
+            await ctx.reply(f'You stole ${amount} from `{member}`.')
         else:
-            await ctx.reply('You need at least $20 to rob someone.')
-            ctx.command.reset_cooldown(ctx)
+            amount = random.randint(20, max(wallet1 // 3, 20))
+            author_bal[0] -= amount
+            currency_col.update_one(
+                {'user': ctx.author.id},
+                {'$set': {'balance': author_bal}}
+            )
+            await ctx.reply(f'You got caught and lost ${amount}.')
     
     @commands.command(hidden = True)
     @commands.is_owner()
-    async def set(self, ctx, member: discord.Member, type, amount: int):
+    @commands.guild_only()
+    async def set(self, ctx, member: discord.Member, type: Literal['wallet', 'bank'], amount: int):
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
             doc = {
@@ -279,17 +276,13 @@ class Currency(commands.Cog):
                 'balance': [0, 0]
             }
             currency_col.insert_one(doc)
-        type = type.lower()
         bal = doc['balance']
-        if type in ('wallet', 'bank'):
-            bal[('wallet', 'bank').index(type)] = amount
-            currency_col.update_one(
-                {'user': member.id},
-                {'$set': {'balance': bal}}
-            )
-            await ctx.reply(f"`{member}`'s {type} balance has been set to ${amount}.")
-        else:
-            await ctx.reply('invalid type')
+        bal[['wallet', 'bank'].index(type)] = amount
+        currency_col.update_one(
+            {'user': member.id},
+            {'$set': {'balance': bal}}
+        )
+        await ctx.reply(f"`{member}`'s {type} balance has been set to ${amount}.")
     
     @commands.group()
     @commands.guild_only()
@@ -298,102 +291,98 @@ class Currency(commands.Cog):
         if doc == None:
             doc = {
                 'guild': ctx.guild.id,
-                'items': {}
+                'items': {} #{name: price}
             }
             shop_col.insert_one(doc)
+        if ctx.invoked_subcommand: return
+        
         items = doc['items']
-        if ctx.invoked_subcommand == None:
-            if items == {}:
-                await ctx.reply('This shop is empty, check again later.')
-            else:
-                options = [
-                    discord.SelectOption(
-                        label = name,
-                        description = f'${price}'
-                    ) for name, price in items.items()
-                ]
-
-                class Shop(discord.ui.View):
-                    @discord.ui.select(placeholder = 'Select an item', options = options)
-                    async def menu(self, inter, select):
-                        doc = currency_col.find_one({'user': inter.user.id})
-                        if doc == None:
-                            doc = {
-                                'user': inter.user.id,
-                                'balance': [0, 0]
-                            }
-                            currency_col.insert_one(doc)
-                        bal = doc['balance']
-                        wallet = bal[0]
-                        price = items[select.values[0]]
-                        if wallet >= price:
-                            bal[0] -= price
-                            currency_col.update_one(
-                                {'user': inter.user.id},
-                                {'$set': {'balance': bal}}
-                            )
-                            await inter.response.send_message(f'{inter.user.mention} item "{select.values[0]}" purchased.')
-                        else:
-                            await inter.response.send_message(f'You are ${price - wallet} short.', ephemeral = True)
-
-                message = await ctx.reply('Shop', view = Shop())
+        if items == {}:
+            raise Exception('This shop is empty, check again later.')
+        
+        options = [
+            discord.SelectOption(
+                label = name,
+                description = f'${price}'
+            ) for name, price in items.items()
+        ]
+        
+        class Shop(discord.ui.View):
+            @discord.ui.select(placeholder = 'Select an item', options = options)
+            async def menu(self, inter, select):
+                doc = currency_col.find_one({'user': inter.user.id})
+                if doc == None:
+                    doc = {
+                        'user': inter.user.id,
+                        'balance': [0, 0]
+                    }
+                    currency_col.insert_one(doc)
+                bal = doc['balance']
+                wallet = bal[0]
+                price = items[select.values[0]]
+                if wallet >= price:
+                    raise Exception(f"You're ${price - wallet} short.")
+                
+                bal[0] -= price
+                currency_col.update_one(
+                    {'user': inter.user.id},
+                    {'$set': {'balance': bal}}
+                )
+                await inter.response.send_message(f'{inter.user.mention} item "{select.values[0]}" purchased.')
+        
+        message = await ctx.reply('Shop', view = Shop())
     
     @shop.command()
     @commands.has_guild_permissions(manage_guild = True)
     async def add(self, ctx, name, price: int):
         doc = shop_col.find_one({'guild': ctx.guild.id})
         items = doc['items']
-        if name not in items:
-            if price >= 0:
-                items[name] = price
-                shop_col.update_one(
-                    {'_id': doc['_id']},
-                    {'$set': {'items': items}}
-                )
-                await ctx.reply(f'Item "{name}" added.')
-            else:
-                await ctx.reply('price must be greater than or equal to 0.')
-        else:
-            await ctx.reply(f'Item "{name}" is already added.')
+        if name in items:
+            raise commands.BadArgument(f'Item "{name}" already added.')
+        if price < 0:
+            raise commands.BadArgument('`price` must not be lower than 0.')
+        
+        items[name] = price
+        shop_col.update_one(
+            {'_id': doc['_id']},
+            {'$set': {'items': items}}
+        )
+        await ctx.reply(f'Item "{name}" added.')
     
     @shop.command()
     @commands.has_guild_permissions(manage_guild = True)
-    async def edit(self, ctx, name, other):
+    async def edit(self, ctx, name, change: Union[str, int]):
         doc = shop_col.find_one({'guild': ctx.guild.id})
         items = doc['items']
-        if name in items:
-            if other.isnumeric():
-                items[name] = int(other)
-                shop_col.update_one(
-                    {'_id': doc['_id']},
-                    {'$set': {'items': items}}
-                )
-                await ctx.reply(f'Item "{name}" edited.')
-            else:
-                items[other] = items[name]
-                del items[name]
-                shop_col.update_one(
-                    {'_id': doc['_id']},
-                    {'$set': {'items': items}}
-                )
-                await ctx.reply(f'Item "{name}" edited to "{other}".')
-        else:
-            await ctx.reply(f'Item "{name}" not found.')
+        if name not in items:
+            raise commands.BadArgument(f'Item "{name}" not found.')
+        
+        if isinstance(change, str):
+            items[change] = items[name]
+            del items[name]
+            await ctx.reply(f'Item "{name}" edited to "{change}".')
+        elif isinstance(change, int):
+            items[name] = change
+            await ctx.reply(f'Item "{name}" edited to ${change}.')
+        shop_col.update_one(
+            {'_id': doc['_id']},
+            {'$set': {'items': items}}
+        )
     
     @shop.command()
     @commands.has_guild_permissions(manage_guild = True)
     async def remove(self, ctx, *, name):
         doc = shop_col.find_one({'guild': ctx.guild.id})
         items = doc['items']
-        if name in items:
-            del items[name]
-            shop_col.update_one(
-                {'_id': doc['_id']},
-                {'$set': {'items': items}}
-            )
-            await ctx.reply(f'Item "{name}" removed.')
-        else:
-            await ctx.reply(f'Item "{name}" not found.')
+        if name not in items:
+            raise commands.BadArgument(f'Item "{name}" not found.')
+        
+        del items[name]
+        shop_col.update_one(
+            {'_id': doc['_id']},
+            {'$set': {'items': items}}
+        )
+        await ctx.reply(f'Item "{name}" removed.')
 
 async def setup(bot):
     await bot.add_cog(Currency())
