@@ -10,7 +10,7 @@ client = pymongo.MongoClient(
     server_api = pymongo.server_api.ServerApi('1'),
 )
 db = client.senjibot
-rr_col = db.reaction_rolest_test
+rr_col = db.reaction_roles
 prefix_col = db.prefix
 
 class Moderation(commands.Cog):
@@ -54,15 +54,15 @@ class Moderation(commands.Cog):
         rr = doc['reaction_roles']
         if str(payload.message_id) in rr:
             type = rr[str(payload.message_id)]['type']
-            if payload.emoji.name in rr[str(payload.message_id)]:
-                role = guild.get_role(rr[str(payload.message_id)][payload.emoji.name])
+            if str(payload.emoji) in rr[str(payload.message_id)]:
+                role = guild.get_role(rr[str(payload.message_id)][str(payload.emoji)])
                 if type == 0: #normal
                     await member.add_roles(role)
                 elif type == 1: #unique
                     await member.add_roles(role)
                     message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
                     for reaction in message.reactions:
-                        if reaction.emoji != payload.emoji and reaction.emoji.name in rr[str(payload.message_id)]:
+                        if reaction.emoji != payload.emoji and str(reaction.emoji) in rr[str(payload.message_id)]:
                             await message.remove_reaction(reaction.emoji, member)
                 elif type == 2: #reversed
                     await member.remove_roles(role)
@@ -86,8 +86,8 @@ class Moderation(commands.Cog):
         rr = doc['reaction_roles']
         if str(payload.message_id) in rr:
             type = rr[str(payload.message_id)]['type']
-            if payload.emoji.name in rr[str(payload.message_id)]:
-                role = guild.get_role(rr[str(payload.message_id)][payload.emoji.name])
+            if str(payload.emoji) in rr[str(payload.message_id)]:
+                role = guild.get_role(rr[str(payload.message_id)][str(payload.emoji)])
                 if type == 0: #normal
                     await member.remove_roles(role)
                 elif type == 1: #unique
@@ -150,7 +150,7 @@ Tyoe 5: Binding'''
         if doc == None:
             doc = {
                 'guild': ctx.guild.id,
-                'reaction_roles': {} #{message.id: {'type': 0, emoji.name: role.id}}
+                'reaction_roles': {} #{message.id: {'type': 0, emoji: role.id}}
             }
             rr_col.insert_one(doc)
         if ctx.invoked_subcommand: return
@@ -175,7 +175,7 @@ Tyoe 5: Binding'''
     
     @reaction_role.command()
     @commands.has_guild_permissions(manage_guild = True)
-    async def add(self, ctx, msg_id, channel: Optional[discord.TextChannel], emoji: discord.PartialEmoji, role: discord.Role):
+    async def add(self, ctx, msg_id, channel: Optional[discord.TextChannel], emoji: str, role: discord.Role):
         if channel == None:
             channel = ctx.channel
         message = await channel.fetch_message(int(msg_id))
@@ -183,19 +183,19 @@ Tyoe 5: Binding'''
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {'type': 0} #{emoji.name: role.id}
-        if emoji.name in rr[msg_id]:
-            raise commands.BadArgument(f'Emoji "{emoji}" already added.')
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
+        if emoji in rr[msg_id]:
+            return await ctx.reply(f'Emoji "{emoji}" already added.')
         if role.id in rr[msg_id].values():
-            raise commands.BadArgument(f'Role "{role}" already added.')
+            return await ctx.reply(f'Role "{role}" already added.')
         
-        rr[msg_id][emoji.name] = role.id
+        rr[msg_id][emoji] = role.id
         rr_col.update_one(
             {'_id': doc['_id']},
             {'$set': {'reaction_roles': rr}}
         )
         for reaction in message.reactions:
-            if reaction.emoji == emoji:
+            if str(reaction.emoji) == emoji:
                 async for user in reaction.users():
                     if isinstance(user, discord.Member):
                         await user.add_roles(role)
@@ -203,39 +203,42 @@ Tyoe 5: Binding'''
     
     @reaction_role.command()
     @commands.has_guild_permissions(manage_guild = True)
-    async def edit(self, ctx, msg_id, channel: Optional[discord.TextChannel], emoji: discord.PartialEmoji, change: Union[discord.PartialEmoji, discord.Role]):
+    async def edit(self, ctx, msg_id, channel: Optional[discord.TextChannel], emoji: str, change: Union[discord.Role, str]):
         if channel == None:
             channel = ctx.channel
         message = await channel.fetch_message(int(msg_id))
+        await ctx.message.add_reaction(emoji)
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {'type': 0} #{emoji.name: role.id}
-        if emoji.name not in rr[msg_id]:
-            raise commands.BadArgument(f'Emoji "{emoji}" not found.')
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
+        if emoji not in rr[msg_id]:
+            return await ctx.reply(f'Emoji "{emoji}" not found.')
         
-        if isinstance(change, discord.PartialEmoji):
+        if isinstance(change, str):
             if emoji == change:
-                raise commands.BadArgument('Nothing to edit.')
+                return await ctx.reply('Nothing to edit.')
             
-            role = ctx.guild.get_role(rr[msg_id][emoji.name])
-            rr[msg_id][change.name] = rr[msg_id][emoji.name]
-            del rr[msg_id][emoji.name]
+            role = ctx.guild.get_role(rr[msg_id][emoji])
+            rr[msg_id][change] = rr[msg_id][emoji]
+            del rr[msg_id][emoji]
             for reaction in message.reactions:
-                if reaction.emoji == change:
+                if str(reaction.emoji) == change:
                     async for user in reaction.users():
                         if isinstance(user, discord.Member):
                             await user.add_roles(role)
-                elif reaction.emoji == emoji:
+                elif str(reaction.emoji) == emoji:
                     async for user in reaction.users():
                         if isinstance(user, discord.Member):
                             await user.remove_roles(role)
             await ctx.reply(f'Emoji "{emoji}" changed to "{change}".')
         elif isinstance(change, discord.Role):
-            role = ctx.guild.get_role(rr[msg_id][emoji.name])
-            rr[msg_id][emoji.name] = change.id
+            if rr[msg_id][emoji] == change.id:
+                return await ctx.reply('Nothing to edit.')
+            role = ctx.guild.get_role(rr[msg_id][emoji])
+            rr[msg_id][emoji] = change.id
             for reaction in message.reactions:
-                if reaction.emoji == emoji:
+                if str(reaction.emoji) == emoji:
                     async for user in reaction.users():
                         if isinstance(user, discord.Member):
                             await user.add_roles(change)
@@ -248,7 +251,7 @@ Tyoe 5: Binding'''
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {'type': 0} #{emoji.name: role.id}
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
         rr[msg_id]['type'] = type
         rr_col.update_one(
             {'_id': doc['_id']},
@@ -258,7 +261,7 @@ Tyoe 5: Binding'''
     
     @reaction_role.command()
     @commands.has_guild_permissions(manage_guild = True)
-    async def remove(self, ctx, msg_id, channel: Optional[discord.TextChannel], emoji: discord.PartialEmoji):
+    async def remove(self, ctx, msg_id, channel: Optional[discord.TextChannel], emoji: str):
         if channel == None:
             channel = ctx.channel
         message = await channel.fetch_message(int(msg_id))
@@ -266,27 +269,26 @@ Tyoe 5: Binding'''
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id not in rr:
-            rr[msg_id] = {'type': 0} #{emoji.name: role.id}
-        if emoji.name not in rr[msg_id]:
-            raise commands.BadArgument(f'Emoji "{emoji}" not found.')
+            rr[msg_id] = {'type': 0} #{emoji: role.id}
+        if emoji not in rr[msg_id]:
+            return await ctx.reply(f'Emoji "{emoji}" not found.')
         
-        role = ctx.guild.get_role(rr[msg_id][emoji.name])
-        del rr[msg_id][emoji.name]
+        role = ctx.guild.get_role(rr[msg_id][emoji])
+        del rr[msg_id][emoji]
         rr_col.update_one(
             {'_id': doc['_id']},
             {'$set': {'reaction_roles': rr}}
         )
         for reaction in message.reactions:
-            if reaction.emoji == emoji:
+            if str(reaction.emoji) == emoji:
                 async for user in reaction.users():
                     if isinstance(user, discord.Member):
                         await user.remove_roles(role)
-        await message.remove_reaction(emoji, ctx.me)
         await ctx.reply('Emoji removed.')
     
     @reaction_role.command()
     @commands.has_guild_permissions(manage_guild = True)
-    async def purge(ctx, msg_id: Optional[str]):
+    async def purge(self, ctx, msg_id: Optional[str]):
         doc = rr_col.find_one({'guild': ctx.guild.id})
         rr = doc['reaction_roles']
         if msg_id == None:

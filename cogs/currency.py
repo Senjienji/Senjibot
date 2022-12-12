@@ -19,7 +19,7 @@ class Currency(commands.Cog):
         if member == None:
             member = ctx.author
         if member.bot:
-            raise commands.BadArgument('`member` must not be a bot.')
+            return await ctx.reply('`member` must not be a bot.')
         
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
@@ -75,7 +75,7 @@ class Currency(commands.Cog):
             @discord.ui.button(label = '', emoji = '⬅️', disabled = page == 0)
             async def previous(self, inter, button):
                 if inter.user != ctx.author:
-                    raise commands.CheckFailure('This button is not for you.')
+                    return await inter.response.send_message('This button is not for you.', ephemeral = True)
                 
                 page -= 10
                 button.disabled = page == 0
@@ -85,7 +85,7 @@ class Currency(commands.Cog):
             @discord.ui.button(label = '', emoji = '➡️', disabled = page == len(paginator) // 10 * 10)
             async def next(self, inter, button):
                 if inter.user != ctx.author:
-                    raise commands.CheckFailure('This button is not for you.')
+                    return await inter.response.send_message('This button is not for you.', ephemeral = True)
                 
                 page += 10
                 button.disabled = page == len(paginator) // 10 * 10
@@ -95,7 +95,7 @@ class Currency(commands.Cog):
         await ctx.reply(embed = embed, view = Leaderboard())
     
     @commands.command(aliases = ['dep'])
-    async def deposit(self, ctx, amount: Union[int, 'all']):
+    async def deposit(self, ctx, amount: Union[int, Literal['all']]):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -109,9 +109,9 @@ class Currency(commands.Cog):
             amount = wallet
         amount = min(amount, 1000 - bank)
         if amount <= 0:
-            raise commands.BadArgument('`amount` must be greater than 0.')
+            return await ctx.reply('`amount` must be greater than 0.')
         if wallet < amount:
-            raise Exception(f"You're ${amount - wallet} short.")
+            return await ctx.reply(f"You're ${amount - wallet} short.")
         
         bal[0] -= amount
         bal[1] += amount
@@ -122,7 +122,7 @@ class Currency(commands.Cog):
         await ctx.reply(f'${amount} deposited.')
     
     @commands.command(aliases = ['with'])
-    async def withdraw(self, ctx, amount: Union[int, 'all']):
+    async def withdraw(self, ctx, amount: Union[int, Literal['all']]):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -135,9 +135,9 @@ class Currency(commands.Cog):
         if amount == 'all':
             amount = bank
         if amount <= 0:
-            raise commands.BadArgument('`amount` must be greater than 0.')
+            return await ctx.reply('`amount` must be greater than 0.')
         if bank < amount:
-            raise Exception(f"You're ${amount - bank} short.")
+            return await ctx.reply(f"You're ${amount - bank} short.")
         
         bal[0] += amount
         bal[1] -= amount
@@ -169,7 +169,7 @@ class Currency(commands.Cog):
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
     @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
-    async def give(self, ctx, member: discord.Member, amount: Union[int, 'all']):
+    async def give(self, ctx, member: discord.Member, amount: Union[int, Literal['all']]):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -179,9 +179,11 @@ class Currency(commands.Cog):
             currency_col.insert_one(doc)
         author_bal = doc['balance']
         if member == ctx.author:
-            raise commands.BadArgument("You shouldn't give yourself money.")
+            await ctx.reply("You shouldn't give yourself money.")
+            return ctx.command.reset_cooldown(ctx)
         if member.bot:
-            raise commands.BadArgument('`member` must not be a bot.')
+            await ctx.reply('`member` must not be a bot.')
+            return ctx.command.reset_cooldown(ctx)
         
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
@@ -195,9 +197,11 @@ class Currency(commands.Cog):
         if amount == 'all':
             amount = wallet
         if amount <= 0:
-            raise commands.BadArgument('`amount` must be greater than 0.')
+            await ctx.reply('`amount` must be greater than 0.')
+            return ctx.command.reset_cooldown(ctx)
         if wallet < amount:
-            raise Exception(f"You're ${amount - wallet} short.")
+            await ctx.reply(f"You're ${amount - wallet} short.")
+            return ctx.command.reset_cooldown(ctx)
         
         author_bal[0] -= amount
         member_bal[0] += amount
@@ -224,9 +228,11 @@ class Currency(commands.Cog):
             currency_col.insert_one(doc)
         author_bal = doc['balance']
         if member == ctx.author:
-            raise commands.BadArgument("You shouldn't rob yourself.")
+            await ctx.reply("You shouldn't rob yourself.")
+            return ctx.command.reset_cooldown(ctx)
         if member.bot:
-            raise commands.BadArgument('`member` must not be a bot.')
+            await ctx.reply('`member` must not be a bot.')
+            return ctx.command.reset_cooldown(ctx)
         
         doc = currency_col.find_one({'user': member.id})
         if doc == None:
@@ -239,9 +245,11 @@ class Currency(commands.Cog):
         wallet1 = author_bal[0]
         wallet2 = member_bal[0]
         if wallet1 < 20:
-            raise Exception('You need at least $20 to rob someone.')
+            await ctx.reply('You need at least $20 to rob someone.')
+            return ctx.command.reset_cooldown(ctx)
         if wallet2 < 20:
-            raise Exception('Your target has less than $20.')
+            await ctx.reply('Your target has less than $20.')
+            return ctx.command.reset_cooldown(ctx)
         
         if random.randint(0, 100) < 50:
             amount = random.randint(20, max(wallet2 // 3, 20))
@@ -298,7 +306,7 @@ class Currency(commands.Cog):
         
         items = doc['items']
         if items == {}:
-            raise Exception('This shop is empty, check again later.')
+            return await ctx.reply('This shop is empty, check again later.')
         
         options = [
             discord.SelectOption(
@@ -320,8 +328,8 @@ class Currency(commands.Cog):
                 bal = doc['balance']
                 wallet = bal[0]
                 price = items[select.values[0]]
-                if wallet >= price:
-                    raise Exception(f"You're ${price - wallet} short.")
+                if wallet < price:
+                    return await inter.response.send_message(f"You're ${price - wallet} short.", ephemeral = True)
                 
                 bal[0] -= price
                 currency_col.update_one(
@@ -338,9 +346,9 @@ class Currency(commands.Cog):
         doc = shop_col.find_one({'guild': ctx.guild.id})
         items = doc['items']
         if name in items:
-            raise commands.BadArgument(f'Item "{name}" already added.')
+            return await ctx.reply(f'Item "{name}" already added.')
         if price < 0:
-            raise commands.BadArgument('`price` must not be lower than 0.')
+            return await ctx.reply('`price` must not be lower than 0.')
         
         items[name] = price
         shop_col.update_one(
@@ -355,7 +363,7 @@ class Currency(commands.Cog):
         doc = shop_col.find_one({'guild': ctx.guild.id})
         items = doc['items']
         if name not in items:
-            raise commands.BadArgument(f'Item "{name}" not found.')
+            return await ctx.reply(f'Item "{name}" not found.')
         
         if isinstance(change, str):
             items[change] = items[name]
@@ -375,7 +383,7 @@ class Currency(commands.Cog):
         doc = shop_col.find_one({'guild': ctx.guild.id})
         items = doc['items']
         if name not in items:
-            raise commands.BadArgument(f'Item "{name}" not found.')
+            return await ctx.reply(f'Item "{name}" not found.')
         
         del items[name]
         shop_col.update_one(
