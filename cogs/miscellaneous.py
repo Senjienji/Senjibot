@@ -9,7 +9,7 @@ class Miscellaneous(commands.Cog):
         super().__init__()
         self.bot = bot
         self.bot.tree.add_command(app_commands.ContextMenu(
-            name = 'Avatar',
+            name = 'Get Avatar',
             callback = self.avatar_callback,
         ))
     
