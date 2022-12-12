@@ -57,7 +57,8 @@ class Utility(commands.Cog):
             'message': message.id,
             'author': ctx.author.id
         })
-        await ctx.reply('Embed sent.')
+        if channel != ctx.channel:
+            await ctx.reply('Embed sent.')
     
     @commands.command(name = 'edit-embed')
     async def edit_embed(self, ctx, msg_id: int, channel: Optional[discord.TextChannel], title: Optional[str], description: Optional[str], attachment: Optional[discord.Attachment]):
@@ -87,7 +88,8 @@ class Utility(commands.Cog):
         if attachment:
             embed.set_image(url = attachment.url)
         await message.edit(embed = embed)
-        await ctx.reply('Embed edited.')
+        if channel != ctx.channel:
+            await ctx.reply('Embed edited.')
     
     @commands.Cog.listener()
     async def on_message_delete(self, message):

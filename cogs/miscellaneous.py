@@ -1,34 +1,10 @@
 import discord
 from discord.ext import commands
 from typing import Optional
-import random
 import time
 import os
 
 class Miscellaneous(commands.Cog):
-    @commands.command(name = 'equation')
-    async def equation(self, ctx):
-        equation = f'{random.randint(1, 99)} {random.choice(("+", "-", "*", "%", "//"))} {random.randint(1, 99)}'
-        reply = await ctx.reply(f'{equation} = ?')
-        try:
-            message = await ctx.bot.wait_for('message', check = lambda message: message.channel == ctx.channel and message.author == ctx.author, timeout = 60)
-            embed = discord.Embed(
-                description = f'{equation} = {eval(equation)}',
-                color = 0xffe5ce
-            ).set_footer(
-                text = f'{int((message.created_at - reply.created_at).total_seconds())} seconds'
-            )
-            try:
-                if int(message.content) == eval(equation):
-                    embed.title = 'Correct!'
-                else:
-                    embed.title = 'Wrong!'
-            except ValueError:
-                embed.title = 'Invalid number passed.'
-            await message.reply(embed = embed)
-        except discord.utils.asyncio.TimeoutError:
-            await reply.edit(content = f"{equation} = {eval(equation)}\nYou didn't reply in time.")
-    
     @commands.command(aliases = ['cd'])
     async def cooldown(self, ctx):
         await ctx.reply(embed = discord.Embed(
@@ -124,8 +100,28 @@ Version: {discord.__version__}''',
             style = discord.ButtonStyle.link
         )))
     
+    @commands.command()
+    async def icon(self, ctx, *, server: Optional[discord.Guild]):
+        if server == None:
+            server = ctx.guild
+        await ctx.reply(embed = discord.Embed(
+            title = f'{server.name}.{"gif" if server.icon.is_animated() else "png"}',
+            description = f'[Link]({server.icon.url})',
+            color = 0xffe5ce
+        ).set_image(
+            url = server.icon.url
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
+            icon_url = ctx.author.display_avatar.url
+        ), view = discord.ui.View().add_item(discord.ui.Button(
+            label = 'Link',
+            url = server.icon.url,
+            style = discord.ButtonStyle.link
+        )))
+    
     @commands.command(brief = 'Separate options with a new line')
-    async def poll(self, ctx, title, channel: Optional[discord.TextChannel], *, options):
+    async def poll(self, ctx, channel: Optional[discord.TextChannel], title, *, options):
         if channel == None:
             channel = ctx.channel
         if not channel.permissions_for(ctx.author).send_messages:
@@ -145,6 +141,8 @@ Version: {discord.__version__}''',
         ))
         for i in range(len(options)):
             await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
+        if channel != ctx.channel:
+            await ctx.reply('Poll sent.')
 
 async def setup(bot):
     await bot.add_cog(Miscellaneous())

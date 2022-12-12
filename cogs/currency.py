@@ -6,7 +6,7 @@ import random
 import os
 
 client = pymongo.MongoClient(
-    f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
+    f'mongodb+srv://Senjienji:{os.environ["PASSWORD"]}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
     server_api = pymongo.server_api.ServerApi('1'),
 )
 db = client.senjibot
@@ -164,7 +164,25 @@ class Currency(commands.Cog):
             {'user': ctx.author.id},
             {'$set': {'balance': bal}}
         )
-        await ctx.reply(f'You got ${gain}.')
+        await ctx.reply(f'You got ${gain}!')
+    
+    @commands.command(cooldown_after_parsing = True)
+    @commands.cooldown(rate = 1, per = 24 * 60 * 60, type = commands.BucketType.user):
+    async def daily(self, ctx):
+        doc = currency_col.find_one({'user': ctx.author.id})
+        if doc == None:
+            doc = {
+                'user': ctx.author.id,
+                'balance': [0, 0]
+            }
+            currency_col.insert_one(doc)
+        bal = doc['balance']
+        bal[0] += 30
+        currency_col.update_one(
+            {'user': ctx.author.id},
+            {'$set': {'balance': bal}}
+        )
+        await ctx.reply('You got $30!')
     
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
