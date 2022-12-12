@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from typing import Optional
 import datetime
 import pymongo
 import time
