@@ -1,12 +1,12 @@
 import discord
 from discord.ext import commands
+import datetime
 import pymongo
-import random
 import time
 import os
 
 client = pymongo.MongoClient(
-    f'mongodb+srv://Senjienji:{os.getenv("PASSWORD")}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
+    f'mongodb+srv://Senjienji:{os.environ["PASSWORD"]}@senjienji.czypcav.mongodb.net/?retryWrites=true&w=majority',
     server_api = pymongo.server_api.ServerApi('1'),
 )
 db = client.senjibot
@@ -18,8 +18,9 @@ class MinimalHelpCommand(commands.MinimalHelpCommand):
             title = 'Help',
             description = self.paginator.pages[0],
             color = 0xffe5ce
-        ).set_footer(
-            text = self.context.author.display_name,
+        ).set_author(
+            name = self.context.author,
+            url = f'https://discord.com/users/{self.context.author.id}',
             icon_url = self.context.author.display_avatar.url
         ))
 
@@ -61,23 +62,22 @@ async def before_invoke(ctx):
 
 @bot.event
 async def on_connect():
-    print('Connected')
     for extension in os.listdir('./cogs'):
         if extension.endswith('.py'):
             await bot.load_extension(f'cogs.{extension[:-3]}')
+    print('Connected')
 
 @bot.event
 async def on_ready():
-    bot.launch_time = __import__('datetime').datetime.today()
+    bot.launch_time = datetime.datetime.today()
     print('Ready')
-    #await bot.get_user(bot.owner_id).send(f'Online since {discord.utils.format_dt(bot.launch_time, "d")} {discord.utils.format_dt(bot.launch_time, "T")}')
 
 @bot.event
 async def on_command_error(ctx, error):
     print(f'{str(type(error))[8:-2]}: {error}')
     content = str(error)
     if isinstance(error, commands.CommandOnCooldown):
-        content = f'You are on cooldown. Try again {discord.utils.format_dt(__import__("datetime").datetime.fromtimestamp(time.time() + error.retry_after), "R")}'
+        content = f'You are on cooldown. Try again {discord.utils.format_dt(datetime.datetime.fromtimestamp(time.time() + error.retry_after), "R")}'
     elif isinstance(error, commands.MissingRequiredArgument):
         return await ctx.send_help(ctx.command)
     elif isinstance(error, (commands.CommandNotFound, commands.NotOwner)):
@@ -99,7 +99,7 @@ async def on_guild_remove(guild):
 
 @bot.command(hidden = True)
 @commands.is_owner()
-async def doc(ctx, *, query=None):
+async def doc(ctx, *, query: Optional[str]):
     if query == None:
         await ctx.reply('https://discordpy.readthedocs.io/en/latest/api.html')
     else:
@@ -117,8 +117,9 @@ async def evaluate(ctx, *, content):
     embed = discord.Embed(
         title = 'Evaluation',
         color = 0xffe5ce
-    ).set_footer(
-        text = ctx.author.display_name,
+    ).set_author(
+        name = ctx.author,
+        url = f'https://discord.com/users/{ctx.author.id}',
         icon_url = ctx.author.display_avatar.url
     )
     if content.startswith('await '):
