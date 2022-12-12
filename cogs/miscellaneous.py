@@ -56,10 +56,10 @@ class Miscellaneous(commands.Cog):
         if not channel.permissions_for(ctx.author).send_messages:
             raise commands.MissingPermissions(['send_messages'])
         
-        await channel.send('> ' + '\n> '.join(content.split()) + f'\n-{ctx.author.mention}')
+        await channel.send('> ' + '\n> '.join(content.split()) + f'\n- {ctx.author.mention}')
         await ctx.reply('Message sent.')
     
-    @commands.command(disabled = True)
+    @commands.command(enabled = False)
     async def invite(self, ctx):
         await ctx.reply(
             '<https://Senjibot.up.railway.app/invite>',
@@ -130,11 +130,11 @@ Version: {discord.__version__}''',
             channel = ctx.channel
         if not channel.permissions_for(ctx.author).send_messages:
             raise commands.MissingPermissions(['send_messages'])
-        options = options.split()[:10]
+        options = options.split('\n')[:10]
         if len(options) < 2:
-            raise commands.BadArgument('`options` must be at least 2.')
+            return await ctx.reply('`options` must be at least 2.')
         
-        message = await ctx.send(embed = discord.Embed(
+        message = await channel.send(embed = discord.Embed(
             title = title,
             description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options)),
             color = 0xffe5ce
