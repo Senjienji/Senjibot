@@ -33,7 +33,8 @@ class Miscellaneous(commands.Cog):
             raise commands.MissingPermissions(['send_messages'])
         
         await channel.send('> ' + '\n> '.join(content.split()) + f'\n- {ctx.author.mention}')
-        await ctx.reply('Message sent.')
+        if channel != ctx.channel:
+            await ctx.reply('Message sent.')
     
     @commands.command(enabled = False)
     async def invite(self, ctx):
