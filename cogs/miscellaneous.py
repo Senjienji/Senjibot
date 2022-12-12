@@ -8,10 +8,6 @@ class Miscellaneous(commands.Cog):
     def __init__(self, bot: commands.Bot):
         super().__init__()
         self.bot = bot
-        self.bot.tree.add_command(app_commands.ContextMenu(
-            name = 'Get Avatar',
-            callback = self.avatar_callback,
-        ))
     
     @app_commands.command(description = 'Sends your text')
     @app_commands.describe(
@@ -81,23 +77,6 @@ Version: {discord.__version__}''',
         ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
             url = user.display_avatar.url,
-            style = discord.ButtonStyle.link
-        )))
-    
-    async def avatar_callback(self, inter: discord.Interaction, member: discord.Member):
-        await inter.response.send_message(embed = discord.Embed(
-            title = f'{member.display_name}.{"gif" if member.display_avatar.is_animated() else "png"}',
-            description = f'[Link]({member.display_avatar.url})',
-            color = 0xffe5ce
-        ).set_image(
-            url = member.display_avatar.url
-        ).set_author(
-            name = inter.user,
-            url = f'https://discord.com/users/{inter.user.id}',
-            icon_url = inter.user.display_avatar.url
-        ), view = discord.ui.View().add_item(discord.ui.Button(
-            label = 'Link',
-            url = member.display_avatar.url,
             style = discord.ButtonStyle.link
         )))
     
