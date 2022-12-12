@@ -1,6 +1,6 @@
 import discord
 from discord.ext import commands
-import inspect
+from typing import Optional
 import random
 import time
 import os
@@ -43,22 +43,29 @@ class Miscellaneous(commands.Cog):
                 )
             ) or 'Nothing found.',
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ))
 
     @commands.command()
-    async def say(self, ctx, *, content):
-        await ctx.send(content)
+    async def say(self, ctx, channel: Optional[discord.TextChannel], *, content):
+        if channel == None:
+            channel = ctx.channel
+        if not channel.permissions_for(ctx.author).send_messages:
+            raise commands.MissingPermissions(['send_messages'])
+        
+        await channel.send('> ' + '\n> '.join(content.split()) + f'\n-{ctx.author.mention}')
+        await ctx.reply('Message sent.')
     
-    @commands.command()
+    @commands.command(disabled = True)
     async def invite(self, ctx):
         await ctx.reply(
-            '<https://Senjibot.senjienji.repl.co/invite>',
+            '<https://Senjibot.up.railway.app/invite>',
             view = discord.ui.View().add_item(discord.ui.Button(
                 label = 'Link',
-                url = 'https://Senjibot.senjienji.repl.co/invite',
+                url = 'https://Senjibot.up.railway.app/invite',
                 style = discord.ButtonStyle.link
             ))
         )
@@ -73,8 +80,9 @@ Latency: {int(ctx.bot.latency * 1000)}ms
 Uptime: {discord.utils.format_dt(ctx.bot.launch_time, "R")}
 Version: {discord.__version__}''',
             color = 0xffe5ce
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ))
     
@@ -86,8 +94,9 @@ Version: {discord.__version__}''',
             color = 0xffe5ce
         ).set_image(
             url = emoji.url
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
@@ -96,7 +105,7 @@ Version: {discord.__version__}''',
         )))
 
     @commands.command()
-    async def avatar(self, ctx, *, user: discord.User = None):
+    async def avatar(self, ctx, *, user: Optional[discord.User]):
         if user == None:
             user = ctx.author
         await ctx.reply(embed = discord.Embed(
@@ -105,8 +114,9 @@ Version: {discord.__version__}''',
             color = 0xffe5ce
         ).set_image(
             url = user.display_avatar.url
-        ).set_footer(
-            text = ctx.author.display_name,
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ), view = discord.ui.View().add_item(discord.ui.Button(
             label = 'Link',
@@ -114,19 +124,26 @@ Version: {discord.__version__}''',
             style = discord.ButtonStyle.link
         )))
     
-    @commands.command()
-    async def poll(self, ctx, name, *options):
-        if options == ():
-            raise commands.MissingRequiredArgument(inspect.Parameter('options', inspect.Parameter.VAR_POSITIONAL))
+    @commands.command(brief = 'Separate options with a new line')
+    async def poll(self, ctx, title, channel: Optional[discord.TextChannel], *, options):
+        if channel == None:
+            channel = ctx.channel
+        if not channel.permissions_for(ctx.author).send_messages:
+            raise commands.MissingPermissions(['send_messages'])
+        options = options.split()[:10]
+        if len(options) < 2:
+            raise commands.BadArgument('`options` must be at least 2.')
+        
         message = await ctx.send(embed = discord.Embed(
-            title = f'Poll: {name}',
-            description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options[:10])),
+            title = title,
+            description = '\n'.join(f'{"1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟".split()[i]} {option}' for i, option in enumerate(options)),
             color = 0xffe5ce
-        ).set_footer(
-            text = f'By {ctx.author}',
+        ).set_author(
+            name = ctx.author,
+            url = f'https://discord.com/users/{ctx.author.id}',
             icon_url = ctx.author.display_avatar.url
         ))
-        for i in range(len(options[:10])):
+        for i in range(len(options)):
             await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
 
 async def setup(bot):
