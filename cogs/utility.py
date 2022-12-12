@@ -83,7 +83,7 @@ class Utility(commands.Cog):
         attachment = 'A new attachment to put inside the embed',
         channel = 'The channel to fetch the message from',
     )
-    async def edit_embed(self, inter, msg_id: int, title: Optional[str], description: Optional[str], attachment: Optional[discord.Asset], channel: Optional[discord.TextChannel]):
+    async def edit_embed(self, inter, msg_id: int, title: Optional[str], description: Optional[str], attachment: Optional[discord.Attachment], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(msg_id)
