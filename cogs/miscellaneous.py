@@ -121,7 +121,7 @@ Version: {discord.__version__}''',
         )))
     
     @commands.command(brief = 'Separate options with a new line')
-    async def poll(self, ctx, title, channel: Optional[discord.TextChannel], *, options):
+    async def poll(self, ctx, channel: Optional[discord.TextChannel], title, *, options):
         if channel == None:
             channel = ctx.channel
         if not channel.permissions_for(ctx.author).send_messages:
@@ -141,6 +141,8 @@ Version: {discord.__version__}''',
         ))
         for i in range(len(options)):
             await message.add_reaction('1️⃣ 2️⃣ 3️⃣ 4️⃣ 5️⃣ 6️⃣ 7️⃣ 8️⃣ 9️⃣ 🔟'.split()[i])
+        if channel != ctx.channel:
+            await ctx.reply('Poll sent.')
 
 async def setup(bot):
     await bot.add_cog(Miscellaneous())
