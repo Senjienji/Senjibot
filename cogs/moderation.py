@@ -354,7 +354,7 @@ Type 5: Binding'''
     @app_commands.describe(
         old_msg = "The message's ID to move the reaction roles from",
         new_msg = "The message's ID to move the reaction roles to",
-        channel = "The channel to fetch the new message from'
+        channel = 'The channel to fetch the new message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
     async def move(self, inter, old_msg: str, new_msg: str, channel: Optional[discord.TextChannel]):
