@@ -52,7 +52,7 @@ class Utility(commands.Cog):
         attachment = 'An attachment to put inside the embed',
         channel = 'The channel to send the embed at\nRequires the `Send Messages` permission in that channel'
     )
-    async def embed(self, inter, title: str, description: str, attachment: Optional[discord.Asset], channel: Optional[discord.TextChannel]):
+    async def embed(self, inter, title: str, description: str, attachment: Optional[discord.Attachment], channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         if not channel.permissions_for(inter.user).send_messages:
