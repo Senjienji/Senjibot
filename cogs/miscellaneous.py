@@ -18,7 +18,7 @@ class Miscellaneous(commands.Cog):
        content = 'The text to send',
        channel = 'Where to send the text'
     )
-    async def say(self, inter, content, channel: Optional[discord.TextChannel]):
+    async def say(self, inter, content: str, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         if not channel.permissions_for(inter.user).send_messages:
