@@ -70,9 +70,9 @@ class Moderation(commands.Cog):
                     await member.add_roles(role)
                 elif type == 4: #drop
                     await member.remove_roles(role)
-                elif type == 5: #binding
-                    if not any(j in [i.id for i in member.roles] for j in rr[str(payload.message_id)].values()):
-                        await member.add_roles(role)
+                elif type == 5: #binding
+                    if not any(j in [i.id for i in member.roles] for j in rr[str(payload.message_id)].values()):
+                        await member.add_roles(role)
     
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
