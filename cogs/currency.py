@@ -180,7 +180,7 @@ class Currency(commands.Cog):
         author_bal = doc['balance']
         if member == ctx.author:
             raise commands.BadArgument("You shouldn't give yourself money.")
-        if member.bot
+        if member.bot:
             raise commands.BadArgument('`member` must not be a bot.')
         
         doc = currency_col.find_one({'user': member.id})
