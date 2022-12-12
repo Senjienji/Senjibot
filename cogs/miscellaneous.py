@@ -44,8 +44,9 @@ Version: {discord.__version__}''',
         ))
     
     @app_commands.command(description = 'Shows the emoji image')
-    @app_commands.describe(emoji = 'The emoji to show')
-    async def emoji(self, inter, emoji: discord.PartialEmoji):
+    @app_commands.describe(emoji_id = "The emoji's ID to show")
+    async def emoji(self, inter, emoji_id: int):
+        emoji = await inter.guild.fetch_emoji(emoji_id)
         await inter.response.send_message(embed = discord.Embed(
             title = f'{emoji.name}.{"gif" if emoji.animated else "png"}',
             description = f'[Link]({emoji.url})',
@@ -131,6 +132,8 @@ Version: {discord.__version__}''',
         if channel == None:
             channel = inter.channel
         options = options.split()[:10]
+        if len(options) < 3:
+            raise commands.BadArgument('Requires at least 2 options.')
         if not channel.permissions_for(inter.user).send_messages:
             raise commands.MissingPermissions(['send_messages'])
         
