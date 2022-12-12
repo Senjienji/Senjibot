@@ -59,15 +59,15 @@ class Utility(commands.Cog):
         })
         await ctx.reply('Embed sent.')
     
-    @commands.command()
+    @commands.command(name = 'edit-embed')
     async def edit_embed(self, ctx, msg_id: int, channel: Optional[discord.TextChannel], title: Optional[str], description: Optional[str], attachment: Optional[discord.Attachment]):
         if channel == None:
             channel = ctx.channel
         message = await channel.fetch_message(msg_id)
         if message.author != ctx.me:
-            raise commands.BadArgument('Not my message.')
+            return await ctx.reply('Not my message.')
         if message.embeds == []:
-            raise commands.BadArgument('Embed not found.')
+            return await ctx.reply('Embed not found.')
         
         doc = embed_col.find_one({'message': msg_id})
         if doc == None:
@@ -77,7 +77,7 @@ class Utility(commands.Cog):
             }
             embed_col.insert_one(doc)
         if ctx.author.id not in (ctx.bot.owner_id, doc['author']):
-            raise commands.CheckFailure('Not your embed.')
+            return await ctx.reply('Not your embed.')
         
         embed = message.embeds[0]
         if title:
@@ -113,12 +113,12 @@ class Utility(commands.Cog):
         )
     
     @commands.command()
-    async def snipe(self, ctx, channel: discord.TextChannel = None):
+    async def snipe(self, ctx, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = ctx.channel
         doc = snipe_col.find_one({'guild': ctx.guild.id})
         if doc == None or str(channel.id) not in doc['channels']:
-            raise Exception('Message not found.')
+            return await ctx.reply('Message not found.')
         
         fields = doc['channels'][str(channel.id)]
         author = ctx.guild.get_member(fields['author'])
