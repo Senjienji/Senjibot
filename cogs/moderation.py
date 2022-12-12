@@ -207,7 +207,7 @@ Type 5: Binding''',
         channel = 'The channel to fetch the message from'
     )
     @app_commands.checks.has_permissions(manage_guild = True)
-    async def edit(self, inter, msg_id: str, emoji: str, change: Union[int, str], channel: Optional[discord.TextChannel]):
+    async def edit(self, inter, msg_id: str, emoji: str, change: str, channel: Optional[discord.TextChannel]):
         if channel == None:
             channel = inter.channel
         message = await channel.fetch_message(int(msg_id))
@@ -224,13 +224,13 @@ Type 5: Binding''',
         if emoji not in rr[msg_id]:
             raise commands.BadArgument('Emoji "{emoji}" not found.')
         
-        if isinstance(change, int):
-            new_role = inter.guild.get_role(change)
+        if change.isnumeric():
+            new_role = inter.guild.get_role(int(change))
             old_role = inter.guild.get_role(rr[msg_id][emoji])
             if new_role == None:
                 raise commands.RoleNotFound(change)
             
-            rr[msg_id][emoji] = change
+            rr[msg_id][emoji] = int(change)
             reaction = discord.utils.get(message.reactions, emoji = emoji)
             if reaction != None:
                 async for user in reaction.users():
@@ -238,7 +238,7 @@ Type 5: Binding''',
                         await user.add_roles(new_role)
                         await user.remove_roles(old_role)
             await inter.response.send_message('Role changed.')
-        elif isinstance(change, str):
+        else:
             await message.add_reaction(change)
             role = inter.guild.get_role(rr[msg_id][emoji])
             rr[msg_id][change] = rr[msg_id][emoji]
@@ -252,6 +252,7 @@ Type 5: Binding''',
                     async for user in reaction.users():
                         if isinstance(user, discord.Member):
                             await user.add_roles(role)
+            await message.remove_reaction(emoji, inter.guild.me)
             await inter.response.send_message(f'Emoji changed to {change}.')
         rr_col.update_one(
             {'guild': inter.guild_id},
