@@ -143,7 +143,7 @@ class Currency(commands.Cog):
         if amount == 'all':
             amount = bank
         if amount <= 0:
-            raise commands.BadArgument('Amount must be greater than 0.)
+            raise commands.BadArgument('Amount must be greater than 0.')
         if bank < amount:
             raise Exception(f"You're ${amount - bank} short.")
         
