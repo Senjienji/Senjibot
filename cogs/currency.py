@@ -95,7 +95,7 @@ class Currency(commands.Cog):
         await ctx.reply(embed = embed, view = Leaderboard())
     
     @commands.command(aliases = ['dep'])
-    async def deposit(self, ctx, amount: Literal[int, 'all']):
+    async def deposit(self, ctx, amount: Union[int, 'all']):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -122,7 +122,7 @@ class Currency(commands.Cog):
         await ctx.reply(f'${amount} deposited.')
     
     @commands.command(aliases = ['with'])
-    async def withdraw(self, ctx, amount: Literal[int, 'all']):
+    async def withdraw(self, ctx, amount: Union[int, 'all']):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
@@ -169,7 +169,7 @@ class Currency(commands.Cog):
     @commands.command(cooldown_after_parsing = True)
     @commands.guild_only()
     @commands.cooldown(rate = 1, per = 1 * 60 * 60, type = commands.BucketType.user)
-    async def give(self, ctx, member: discord.Member, amount: Literal[int, 'all']):
+    async def give(self, ctx, member: discord.Member, amount: Union[int, 'all']):
         doc = currency_col.find_one({'user': ctx.author.id})
         if doc == None:
             doc = {
