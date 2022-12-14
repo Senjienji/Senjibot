@@ -69,17 +69,17 @@ class Currency(commands.Cog):
         )
         
         class Leaderboard(discord.ui.View):
-            page = 0
-            embed.description = '\n'.join(paginator[page:page + 10])
+            def __init__(self):
+                self.page = 0
             
             @discord.ui.button(label = '', emoji = '⬅️', disabled = page == 0)
             async def previous(self, inter, button):
                 if inter.user != ctx.author:
                     return await inter.response.send_message('This button is not for you.', ephemeral = True)
                 
-                page -= 10
-                button.disabled = page == 0
-                embed.description = '\n'.join(paginator[page:page + 10])
+                self.page -= 10
+                button.disabled = self.page <= 0
+                embed.description = '\n'.join(paginator[self.page:self.page + 10])
                 await inter.response.edit_message(embed = embed, view = self)
             
             @discord.ui.button(label = '', emoji = '➡️', disabled = page == len(paginator) // 10 * 10)
@@ -87,12 +87,14 @@ class Currency(commands.Cog):
                 if inter.user != ctx.author:
                     return await inter.response.send_message('This button is not for you.', ephemeral = True)
                 
-                page += 10
-                button.disabled = page == len(paginator) // 10 * 10
-                embed.description = '\n'.join(paginator[page:page + 10])
+                self.page += 10
+                button.disabled = self.page >= len(paginator) // 10 * 10
+                embed.description = '\n'.join(paginator[self.page:self.page + 10])
                 await inter.response.edit_message(embed = embed, view = self)
         
-        await ctx.reply(embed = embed, view = Leaderboard())
+        view = Leaderboard()
+        embed.description = '\n'.join(paginator[view.page:view.page + 10]
+        await ctx.reply(embed = embed, view = view)
     
     @commands.command(aliases = ['dep'])
     async def deposit(self, ctx, amount: Union[int, Literal['all']]):
