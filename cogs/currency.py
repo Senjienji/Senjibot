@@ -69,10 +69,9 @@ class Currency(commands.Cog):
         )
         
         class Leaderboard(discord.ui.View):
-            def __init__(self):
-                self.page = 0
+            page = 0
             
-            @discord.ui.button(label = '', emoji = '⬅️', disabled = self.page == 0)
+            @discord.ui.button(label = '', emoji = '⬅️', disabled = page == 0)
             async def previous(self, inter, button):
                 if inter.user != ctx.author:
                     return await inter.response.send_message('This button is not for you.', ephemeral = True)
@@ -82,7 +81,7 @@ class Currency(commands.Cog):
                 embed.description = '\n'.join(paginator[self.page:self.page + 10])
                 await inter.response.edit_message(embed = embed, view = self)
             
-            @discord.ui.button(label = '', emoji = '➡️', disabled = self.page == len(paginator) // 10 * 10)
+            @discord.ui.button(label = '', emoji = '➡️', disabled = page == len(paginator) // 10 * 10)
             async def next(self, inter, button):
                 if inter.user != ctx.author:
                     return await inter.response.send_message('This button is not for you.', ephemeral = True)
