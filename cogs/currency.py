@@ -93,7 +93,7 @@ class Currency(commands.Cog):
                 await inter.response.edit_message(embed = embed, view = self)
         
         view = Leaderboard()
-        embed.description = '\n'.join(paginator[view.page:view.page + 10]
+        embed.description = '\n'.join(paginator[view.page:view.page + 10])
         await ctx.reply(embed = embed, view = view)
     
     @commands.command(aliases = ['dep'])
