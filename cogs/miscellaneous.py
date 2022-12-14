@@ -36,13 +36,13 @@ class Miscellaneous(commands.Cog):
         if channel != ctx.channel:
             await ctx.reply('Message sent.')
     
-    @commands.command(enabled = False)
+    @commands.command()
     async def invite(self, ctx):
         await ctx.reply(
-            '<https://Senjibot.up.railway.app/invite>',
+            'https://senjienji.github.io/senjibot',
             view = discord.ui.View().add_item(discord.ui.Button(
                 label = 'Link',
-                url = 'https://Senjibot.up.railway.app/invite',
+                url = 'https://senjienji.github.io/senjibot',
                 style = discord.ButtonStyle.link
             ))
         )
