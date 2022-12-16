@@ -227,7 +227,7 @@ Tyoe 5: Binding'''
                     async for user in reaction.users():
                         if isinstance(user, discord.Member):
                             await user.add_roles(role)
-                elif str(reaction.emoji == emoji:
+                elif str(reaction.emoji) == emoji:
                     async for user in reaction.users():
                         if isinstance(user, discord.Member):
                             await user.remove_roles(role)
