@@ -56,23 +56,24 @@ class Moderation(commands.Cog):
             type = rr[str(payload.message_id)]['type']
             if str(payload.emoji) in rr[str(payload.message_id)]:
                 role = guild.get_role(rr[str(payload.message_id)][str(payload.emoji)])
-                if type == 0: #normal
-                    await member.add_roles(role)
-                elif type == 1: #unique
-                    await member.add_roles(role)
-                    message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
-                    for reaction in message.reactions:
-                        if reaction.emoji != payload.emoji and str(reaction.emoji) in rr[str(payload.message_id)]:
-                            await message.remove_reaction(reaction.emoji, member)
-                elif type == 2: #reversed
-                    await member.remove_roles(role)
-                elif type == 3: #verify
-                    await member.add_roles(role)
-                elif type == 4: #drop
-                    await member.remove_roles(role)
-                elif type == 5: #binding
-                    if not any(j in [i.id for i in member.roles] for j in rr[str(payload.message_id)].values()):
+                match type:
+                    case 0:#normal
                         await member.add_roles(role)
+                    case 1: #unique
+                        await member.add_roles(role)
+                        message = await guild.get_channel(payload.channel_id).fetch_message(payload.message_id)
+                        for reaction in message.reactions:
+                            if reaction.emoji != payload.emoji and str(reaction.emoji) in rr[str(payload.message_id)]:
+                                await message.remove_reaction(reaction.emoji, member)
+                    case 2: #reversed
+                        await member.remove_roles(role)
+                    case 3: #verify
+                        await member.add_roles(role)
+                    case 4: #drop
+                        await member.remove_roles(role)
+                    case 5: #binding
+                        if not any(j in [i.id for i in member.roles] for j in rr[str(payload.message_id)].values()):
+                            await member.add_roles(role)
     
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
@@ -88,18 +89,19 @@ class Moderation(commands.Cog):
             type = rr[str(payload.message_id)]['type']
             if str(payload.emoji) in rr[str(payload.message_id)]:
                 role = guild.get_role(rr[str(payload.message_id)][str(payload.emoji)])
-                if type == 0: #normal
-                    await member.remove_roles(role)
-                elif type == 1: #unique
-                    await member.remove_roles(role)
-                elif type == 2: #reversed
-                    await member.add_roles(role)
-                elif type == 3: #verify
-                    pass
-                elif type == 4: #drop
-                    pass
-                elif type == 5: #binding
-                    pass
+                match type:
+                    case 0: #normal
+                        await member.remove_roles(role)
+                    case 1: #unique
+                        await member.remove_roles(role)
+                    case 2: #reversed
+                        await member.add_roles(role)
+                    case 3: #verify
+                        pass
+                    case 4: #drop
+                        pass
+                    case 5: #binding
+                        pass
     
     @commands.Cog.listener()
     async def on_message_delete(self, message):
@@ -223,14 +225,15 @@ Tyoe 5: Binding'''
             rr[msg_id][change] = rr[msg_id][emoji]
             del rr[msg_id][emoji]
             for reaction in message.reactions:
-                if str(reaction.emoji) == change:
-                    async for user in reaction.users():
-                        if isinstance(user, discord.Member):
-                            await user.add_roles(role)
-                elif str(reaction.emoji) == emoji:
-                    async for user in reaction.users():
-                        if isinstance(user, discord.Member):
-                            await user.remove_roles(role)
+                match str(reaction.emoji):
+                    case change:
+                        async for user in reaction.users():
+                            if isinstance(user, discord.Member):
+                                await user.add_roles(role)
+                    case emoji:
+                        async for user in reaction.users():
+                            if isinstance(user, discord.Member):
+                                await user.remove_roles(role)
             await ctx.reply(f'Emoji "{emoji}" changed to "{change}".')
         elif isinstance(change, discord.Role):
             if rr[msg_id][emoji] == change.id:
